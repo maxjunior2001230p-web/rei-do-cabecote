@@ -1,0 +1,10 @@
+.management-content .confirmation-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #304657;
+}
+
+.management-content .confirmation-content .pi-exclamation-triangle {
+  color: #d9822b;
+}

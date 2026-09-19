@@ -1,0 +1,105 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+' Definição das Classes
+
+class FornecedorModel {
+  - id: UUID
+  - nome: String
+  - cnpj: String
+  - endereco: String
+  - complemento: String
+  - contato: String
+  - categoria: String
+}
+
+class PecaModel {
+  - id: UUID
+  - nome: String
+  - descricao: String
+  - preco: Double
+  - situacao: String
+}
+
+class UsuarioModel {
+  - id: UUID
+  - nome: String
+  - email: String
+  - senha: String
+  - cargo: String
+}
+
+class VeiculoModel {
+  - id: UUID
+  - placa: String
+  - modelo: String
+  - montadora: String
+  - ano_modelo: String
+  - ano_fabricacao: String
+  - cor: String
+  - cambio: TipoCambio
+}
+
+enum TipoCambio {
+  MANUAL
+  AUTOMATICO
+  CVT
+  AUTOMATIZADO
+  DCT
+}
+
+class ClienteModel {
+  - id: UUID
+  - nome: String
+  - cpf: String
+  - telefone: String
+  - endereco: String
+}
+
+class ServicoModel {
+  - id: UUID
+  - descricao: String
+  - dataAgendamento: Date
+  - dataConclusao: Date
+  - valorTotal: Double
+  - status: StatusServico
+  - garantia: String
+  --
+  + gerarOrcamento()
+  + incluirGarantia()
+}
+
+enum StatusServico {
+  AGENDADO
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+}
+
+' --- CLASSE ALTERADA ---
+class ProdutoVenda {
+  - id: UUID
+  - nome: String
+  - descricao: String
+  - precoVenda: Double
+  - categoria: String
+  - imagem: String
+}
+
+' --- RELACIONAMENTOS ---
+
+ClienteModel "1" -- "1..*" VeiculoModel : possui
+
+ServicoModel "*" -- "1" VeiculoModel : realizado em
+ServicoModel "*" -- "1" UsuarioModel : executado por
+ServicoModel "*" -- "*" PecaModel : utiliza
+PecaModel "*" -- "1" FornecedorModel : fornecida por
+
+ProdutoVenda "*" -- "1" ClienteModel : adquirido por
+
+VeiculoModel -- TipoCambio
+ServicoModel -- StatusServico
+
+@enduml

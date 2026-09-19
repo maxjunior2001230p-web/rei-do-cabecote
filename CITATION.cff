@@ -1,0 +1,30 @@
+cff-version: 1.0.1
+message: Please cite this software using these metadata.
+title: Rei do Cabeçote - Sistema de Gestão para Mecânica Automotiva
+authors:
+  - family-names: Andrade Nogueira
+    given-names: Gabriel
+  - family-names: Tinoco de Aguiar
+    given-names: Gabriel Lucas
+  - family-names: Tavares de Souza
+    given-names: Gabriel
+  - family-names: De Jesus Junior
+    given-names: Maximiliano Augusto
+  - name-suffix: Professora
+    affiliation: PUC Minas
+    family-names: Alonso Veloso
+    given-names: Eveline
+  - name-suffix: Professora
+    affiliation: PUC Minas
+    family-names: Ribeiro de Souza
+    given-names: Joana Gabriela
+keywords:
+  - mecânica automotiva
+  - gestão de serviços
+  - orçamentos
+  - cadastro de clientes
+  - dashboard financeiro
+repository-code: https://github.com/ICEI-PUC-Minas-PPLES-TI/plf-es-2025-2-ti3-5533100-rei-do-cabecote
+license: CC-BY-4.0
+version: 1.0.0
+date-released: 2025-12-09

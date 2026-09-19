@@ -1,0 +1,85 @@
+.parts-management-card {
+    background: #ffffff;
+  padding: clamp(1rem, 2.5vw, 1.75rem);
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+}
+
+.parts-management-card .p-field {
+  margin-bottom: 0;
+}
+
+.parts-management-card .p-button {
+    margin-right: .5rem;
+}
+
+.parts-management-card .confirmation-content {
+    display: flex;
+    align-items: center;
+}
+
+.parts-management-card .titulo {
+  margin: 0;
+  color: #1b2230;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  line-height: 1.1;
+}
+
+.parts-management-card .screen-heading {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.parts-management-card .screen-kicker {
+  color: #bd6900;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.parts-management-card .screen-heading p {
+  margin: 0.2rem 0 0;
+  color: #7b8493;
+  font-size: 0.84rem;
+}
+
+.parts-management-card .primary-action {
+  border: 0 !important;
+  background: #171a22 !important;
+  color: #fff !important;
+}
+
+.parts-management-card .primary-action:hover {
+  background: #ff9800 !important;
+  color: #17130d !important;
+}
+
+.parts-management-card .parts-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.parts-management-card .parts-form-grid .p-field:first-child,
+.parts-management-card .parts-form-grid .p-field:nth-child(2) {
+  grid-column: span 2;
+}
+
+.parts-management-card .p-datatable .p-datatable-emptymessage td {
+  padding: 2.5rem 1rem;
+  color: #7b8493;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .parts-management-card .parts-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .parts-management-card .parts-form-grid .p-field:first-child,
+  .parts-management-card .parts-form-grid .p-field:nth-child(2) {
+    grid-column: auto;
+  }
+}
