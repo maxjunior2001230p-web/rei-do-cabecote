@@ -86,6 +86,41 @@
     box-shadow: none;
 }
 
+.password-input-wrapper {
+    position: relative;
+}
+
+.password-input-wrapper .p-inputtext {
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #aeb4c0;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+    color: #ffb74d;
+}
+
+.password-toggle:focus-visible {
+    outline: 2px solid #ff9800;
+    outline-offset: 2px;
+}
+
 /* 4. BOTÃO (Destaque Laranja) */
 .login-card .p-button {
     background-color: #FF9800; /* */

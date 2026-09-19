@@ -79,7 +79,10 @@ public class SecurityConfigurations {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
-        String corsOrigins = System.getenv().getOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173");
+        String corsOrigins = System.getenv().getOrDefault(
+            "CORS_ALLOWED_ORIGINS",
+            "http://localhost:5173,https://heartfelt-sparkle-production-3dee.up.railway.app"
+        );
         String[] origins = corsOrigins.split(",");
 
         CorsConfiguration corsConfig = new CorsConfiguration();

@@ -4,7 +4,7 @@ import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { Card } from 'primereact/card';
-import { FaArrowLeft, FaLock } from 'react-icons/fa';
+import { FaArrowLeft, FaEye, FaEyeSlash, FaLock } from 'react-icons/fa';
 import api from '../services/api';
 import { useAuth } from '../auth/AuthContext'; 
 import './LoginPage.css';
@@ -12,6 +12,7 @@ import './LoginPage.css';
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const toast = useRef(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -58,7 +59,18 @@ const LoginPage = () => {
                     </div>
                     <div className="p-field">
                         <label htmlFor="password">Senha</label>
-                        <InputText id="password" value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="current-password" placeholder="Digite sua senha" />
+                        <div className="password-input-wrapper">
+                            <InputText id="password" value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Digite sua senha" />
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() => setShowPassword((visible) => !visible)}
+                                aria-label={showPassword ? 'Ocultar senha' : 'Visualizar senha'}
+                                title={showPassword ? 'Ocultar senha' : 'Visualizar senha'}
+                            >
+                                {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                            </button>
+                        </div>
                     </div>
                     <Button type="submit" label="Entrar no painel" icon="pi pi-arrow-right" iconPos="right" className="p-mt-2" />
                 </form>
