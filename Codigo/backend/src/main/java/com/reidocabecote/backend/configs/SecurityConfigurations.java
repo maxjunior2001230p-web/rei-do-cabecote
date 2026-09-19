@@ -83,10 +83,14 @@ public class SecurityConfigurations {
             "CORS_ALLOWED_ORIGINS",
             "http://localhost:5173,https://heartfelt-sparkle-production-3dee.up.railway.app"
         );
-        String[] origins = corsOrigins.split(",");
+        List<String> origins = Arrays.stream(corsOrigins.split(","))
+            .map(String::trim)
+            .map(origin -> origin.replaceAll("/+$", ""))
+            .filter(origin -> !origin.isEmpty())
+            .toList();
 
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOriginPatterns(Arrays.asList(origins));
+        corsConfig.setAllowedOriginPatterns(origins);
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")); // Adicione OPTIONS e PATCH se necessário
         corsConfig.setAllowCredentials(true);
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
