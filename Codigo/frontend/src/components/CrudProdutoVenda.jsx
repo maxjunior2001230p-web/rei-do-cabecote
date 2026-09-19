@@ -15,7 +15,7 @@ import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import ManagementFilters from './ManagementFilters';
 
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = import.meta.env.VITE_API_URL || '';
 
 const CrudProdutoVenda = () => {
   

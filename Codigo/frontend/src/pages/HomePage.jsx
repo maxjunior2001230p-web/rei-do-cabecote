@@ -34,7 +34,7 @@ import { Button } from 'primereact/button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = import.meta.env.VITE_API_URL || '';
 
 const HomePage = () => {
     const { isLoggedIn } = useAuth();
