@@ -17,8 +17,10 @@ public class Admin {
             String email = "admin@admin.com";
             String senha = "admin123";
 
-            if (!usuarioRepository.existsByEmail(email)) {
-                UsuarioModel admin = new UsuarioModel(
+            UsuarioModel admin = usuarioRepository.findUsuarioModelByEmail(email);
+
+            if (admin == null) {
+                admin = new UsuarioModel(
                         "Administrador",
                         email,
                         passwordEncoder.encode(senha),
@@ -26,6 +28,10 @@ public class Admin {
                 );
                 usuarioRepository.save(admin);
                 System.out.println("Usuário administrador criado com sucesso.");
+            } else if (!passwordEncoder.matches(senha, admin.getSenha())) {
+                admin.setSenha(passwordEncoder.encode(senha));
+                usuarioRepository.save(admin);
+                System.out.println("Senha do usuário administrador atualizada.");
             } else {
                 System.out.println("Usuário administrador já existe.");
             }

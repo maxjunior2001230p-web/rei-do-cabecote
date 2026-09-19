@@ -15,7 +15,7 @@ import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import ManagementFilters from './ManagementFilters';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || '';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://rei-do-cabecote-production.up.railway.app';
 
 const CrudProdutoVenda = () => {
   

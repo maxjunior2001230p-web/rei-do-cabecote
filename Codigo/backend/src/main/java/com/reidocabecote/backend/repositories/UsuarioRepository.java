@@ -10,5 +10,6 @@ import com.reidocabecote.backend.models.UsuarioModel;
 @Repository
 public interface UsuarioRepository extends JpaRepository<UsuarioModel, UUID>{
     UserDetails findByEmail(String email);
+    UsuarioModel findUsuarioModelByEmail(String email);
     boolean existsByEmail(String email);
 }

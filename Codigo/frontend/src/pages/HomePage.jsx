@@ -34,7 +34,7 @@ import { Button } from 'primereact/button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || '';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://rei-do-cabecote-production.up.railway.app';
 
 const HomePage = () => {
     const { isLoggedIn } = useAuth();

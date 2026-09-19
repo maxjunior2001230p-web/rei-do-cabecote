@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-ARG VITE_API_URL
+ARG VITE_API_URL=https://rei-do-cabecote-production.up.railway.app
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
