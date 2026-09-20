@@ -13,5 +13,6 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 ENV JAVA_OPTS=""
+ENV PORT=8081
 EXPOSE 8081
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
