@@ -46,7 +46,7 @@ const loadLogoData = async () => {
   });
 };
 
-const addTable = (doc, options) => autoTable(doc, {
+const addTable = (doc, { headStyles = {}, ...options }) => autoTable(doc, {
   theme: 'grid',
   margin: { left: 16, right: 16 },
   styles: {
@@ -59,13 +59,14 @@ const addTable = (doc, options) => autoTable(doc, {
     overflow: 'linebreak',
     valign: 'middle',
   },
+  ...options,
   headStyles: {
-    fillColor: brandColors.soft,
+    fillColor: brandColors.white,
     textColor: brandColors.charcoal,
     fontStyle: 'bold',
     fontSize: 8,
+    ...headStyles,
   },
-  ...options,
 });
 
 export const generateServiceQuotePdf = async (quote) => {
@@ -147,6 +148,10 @@ export const generateServiceQuotePdf = async (quote) => {
   addTable(doc, {
     startY: doc.lastAutoTable.finalY + 6,
     head: [['PEÇA', 'DESCRIÇÃO / APLICAÇÃO', 'VALOR']],
+    headStyles: {
+      fillColor: brandColors.charcoal,
+      textColor: brandColors.white,
+    },
     body: pieceRows,
     columnStyles: {
       0: { cellWidth: 52, fontStyle: 'bold' },
