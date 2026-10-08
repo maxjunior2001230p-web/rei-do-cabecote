@@ -48,6 +48,9 @@ const CrudVeiculo = () => {
   const [selectedMontadora, setSelectedMontadora] = useState(null);
   const [clientes, setClientes] = useState([]);
   const [search, setSearch] = useState('');
+  const [makeFilter, setMakeFilter] = useState(null);
+  const [transmissionFilter, setTransmissionFilter] = useState(null);
+  const [ownerFilter, setOwnerFilter] = useState(null);
   const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('placa', vehicleSortOptions);
   const loadVeiculo = useCallback(async (id) => {
     const response = await api.get('/veiculos');
@@ -103,10 +106,10 @@ const CrudVeiculo = () => {
   }, []);
 
   const cambios = [
-    { label: 'MANUAL', value: 'MANUAL' },
-    { label: 'AUTOMATICO', value: 'AUTOMATICO' },
+    { label: 'Manual', value: 'MANUAL' },
+    { label: 'Automático', value: 'AUTOMATICO' },
     { label: 'CVT', value: 'CVT' },
-    { label: 'AUTOMATIZADO', value: 'AUTOMATIZADO' },
+    { label: 'Automatizado', value: 'AUTOMATIZADO' },
     { label: 'DCT', value: 'DCT' }
   ];
 
@@ -225,7 +228,18 @@ const CrudVeiculo = () => {
     );
   };
 
-  const veiculosFiltrados = sortItems(veiculos.filter((item) => `${item.placa} ${item.modelo} ${item.montadora} ${item.cor} ${item.cambio}`.toLowerCase().includes(search.toLowerCase())));
+  const makeFilterOptions = [...new Set(veiculos.map((item) => item.montadora).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base' }))
+    .map((make) => ({ label: make, value: make }));
+  const ownerFilterOptions = clientes
+    .map((client) => ({ label: client.nome, value: client.id }))
+    .sort((left, right) => left.label.localeCompare(right.label, 'pt-BR', { sensitivity: 'base' }));
+  const veiculosFiltrados = sortItems(veiculos.filter((item) => (
+    `${item.placa} ${item.modelo} ${item.montadora} ${item.cor} ${item.cambio}`.toLowerCase().includes(search.toLowerCase())
+      && (!makeFilter || item.montadora === makeFilter)
+      && (!transmissionFilter || item.cambio === transmissionFilter)
+      && (!ownerFilter || String(item.cliente?.id) === String(ownerFilter))
+  )));
 
   return (
     <div className="card">
@@ -233,15 +247,36 @@ const CrudVeiculo = () => {
       {!isFormRoute ? (
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Relacionamento" title="Veículos" description="Acompanhe os veículos vinculados aos clientes." />} end={<Button label="Adicionar veículo" icon="pi pi-plus" onClick={openNew} />} />
-          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por placa, modelo, montadora ou cor" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions} />
+          <ManagementFilters
+            search={search}
+            onSearch={setSearch}
+            placeholder="Buscar por placa, modelo, montadora ou cor"
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortFieldChange={setSortField}
+            onSortOrderChange={setSortOrder}
+            sortOptions={sortOptions}
+            resultCount={veiculosFiltrados.length}
+            hasActiveFilters={Boolean(search || makeFilter || transmissionFilter || ownerFilter)}
+            onClearFilters={() => {
+              setSearch('');
+              setMakeFilter(null);
+              setTransmissionFilter(null);
+              setOwnerFilter(null);
+            }}
+          >
+            <Dropdown aria-label="Filtrar veículos por montadora" value={makeFilter} options={makeFilterOptions} onChange={(event) => setMakeFilter(event.value)} placeholder="Todas as montadoras" showClear />
+            <Dropdown aria-label="Filtrar veículos por câmbio" value={transmissionFilter} options={cambios} onChange={(event) => setTransmissionFilter(event.value)} placeholder="Todos os câmbios" showClear />
+            <Dropdown aria-label="Filtrar veículos por cliente" value={ownerFilter} options={ownerFilterOptions} onChange={(event) => setOwnerFilter(event.value)} placeholder="Todos os clientes" showClear disabled={!ownerFilterOptions.length} />
+          </ManagementFilters>
           <DataTable value={veiculosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum veículo encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-            <Column field="placa" header="Placa" sortable></Column>
-            <Column field="modelo" header="Modelo" sortable></Column>
-            <Column field="montadora" header="Montadora" sortable></Column>
-            <Column field="ano_modelo" header="Ano Modelo" sortable></Column>
-            <Column field="ano_fabricacao" header="Ano Fabricação" sortable></Column>
-            <Column field="cor" header="Cor" sortable></Column>
-            <Column field="cambio" header="Câmbio" sortable></Column>
+            <Column field="placa" header="Placa"></Column>
+            <Column field="modelo" header="Modelo"></Column>
+            <Column field="montadora" header="Montadora"></Column>
+            <Column field="ano_modelo" header="Ano Modelo"></Column>
+            <Column field="ano_fabricacao" header="Ano Fabricação"></Column>
+            <Column field="cor" header="Cor"></Column>
+            <Column field="cambio" header="Câmbio"></Column>
             <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
           </DataTable>
         </>

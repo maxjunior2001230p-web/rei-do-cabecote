@@ -62,6 +62,7 @@ const CrudProdutoVenda = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState(null);
+  const [stockFilter, setStockFilter] = useState(null);
   const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', productSortOptions);
   const toast = useRef(null);
   const fileUploadRef = useRef(null); 
@@ -86,6 +87,10 @@ const CrudProdutoVenda = () => {
   const statusVendaOptions = [
     { label: 'Disponível', value: 'DISPONIVEL' },
     { label: 'Vendido', value: 'VENDIDO' },
+  ];
+  const stockFilterOptions = [
+    { label: 'Com estoque', value: 'in-stock' },
+    { label: 'Sem estoque', value: 'out-of-stock' },
   ];
   const categoryOptions = [...new Set(produtosVenda.map((item) => item.categoria?.trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }))
@@ -289,7 +294,8 @@ const CrudProdutoVenda = () => {
     const searchable = `${item.nome} ${item.descricao} ${item.categoria} ${item.statusVenda}`.toLowerCase();
     return searchable.includes(search.toLowerCase())
       && (!categoryFilter || item.categoria?.trim() === categoryFilter)
-      && (!statusFilter || item.statusVenda === statusFilter);
+      && (!statusFilter || item.statusVenda === statusFilter)
+      && (!stockFilter || (stockFilter === 'in-stock' ? Number(item.quantidade) > 0 : Number(item.quantidade) <= 0));
   }));
   
   
@@ -299,16 +305,34 @@ const CrudProdutoVenda = () => {
       {!isFormRoute ? (
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Estoque e catálogo" title="Produtos à venda" description="Organize os produtos, preços e disponibilidade na vitrine." />} end={<Button label="Adicionar produto" icon="pi pi-plus" onClick={openNew} />} />
-          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por produto, categoria ou status" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
-            <Dropdown value={categoryFilter} options={categoryOptions} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas as categorias" showClear disabled={!categoryOptions.length} />
-            <Dropdown value={statusFilter} options={statusVendaOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
+          <ManagementFilters
+            search={search}
+            onSearch={setSearch}
+            placeholder="Buscar por produto, categoria ou status"
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortFieldChange={setSortField}
+            onSortOrderChange={setSortOrder}
+            sortOptions={sortOptions}
+            resultCount={produtosFiltrados.length}
+            hasActiveFilters={Boolean(search || categoryFilter || statusFilter || stockFilter)}
+            onClearFilters={() => {
+              setSearch('');
+              setCategoryFilter(null);
+              setStatusFilter(null);
+              setStockFilter(null);
+            }}
+          >
+            <Dropdown aria-label="Filtrar produtos por categoria" value={categoryFilter} options={categoryOptions} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas as categorias" showClear disabled={!categoryOptions.length} />
+            <Dropdown aria-label="Filtrar produtos por disponibilidade" value={statusFilter} options={statusVendaOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
+            <Dropdown aria-label="Filtrar produtos por estoque" value={stockFilter} options={stockFilterOptions} onChange={(event) => setStockFilter(event.value)} placeholder="Qualquer estoque" showClear />
           </ManagementFilters>
           <DataTable value={produtosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum produto encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-            <Column field="nome" header="Nome" sortable></Column>
-            <Column field="precoVenda" header="Preço" body={precoVendaBodyTemplate} sortable></Column>
-            <Column field="quantidade" header="Qtd." sortable></Column>
-            <Column field="statusVenda" header="Status" sortable></Column>
-            <Column field="categoria" header="Categoria" sortable></Column>
+            <Column field="nome" header="Nome"></Column>
+            <Column field="precoVenda" header="Preço" body={precoVendaBodyTemplate}></Column>
+            <Column field="quantidade" header="Qtd."></Column>
+            <Column field="statusVenda" header="Status"></Column>
+            <Column field="categoria" header="Categoria"></Column>
             <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
           </DataTable>
         </>

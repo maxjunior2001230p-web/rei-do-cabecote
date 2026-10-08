@@ -33,6 +33,14 @@ const serviceSortOptions = [
   { label: 'Valor total', field: 'preco' },
 ];
 
+const serviceTypeOptions = [
+  'Retífica do cabeçote',
+  'Assento e guias de válvula',
+  'Substituição de peças',
+  'Montagem e testes',
+  'Serviços complementares',
+];
+
 const serviceCurrencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const getGuaranteeMonths = (start, end) => {
@@ -65,6 +73,7 @@ const CrudServico = () => {
   const [viewServicoDialog, setViewServicoDialog] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  const [typeFilter, setTypeFilter] = useState(null);
   const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('dataPrevista', serviceSortOptions);
 
   const [pecas, setPecas] = useState([]);
@@ -413,7 +422,9 @@ const CrudServico = () => {
 
   const servicosFiltrados = sortItems(servicos.filter((servico) => {
     const searchable = `${servico.descricao || ''} ${servico.tipo || ''} ${servico.status || ''} ${servico.cliente?.nome || ''} ${servico.veiculo?.placa || ''}`.toLowerCase();
-    return searchable.includes(search.toLowerCase()) && (!statusFilter || servico.status === statusFilter);
+    return searchable.includes(search.toLowerCase())
+      && (!statusFilter || servico.status === statusFilter)
+      && (!typeFilter || servico.tipo === typeFilter);
   }));
 
   return (
@@ -586,14 +597,30 @@ const CrudServico = () => {
       ) : (
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Operação da oficina" title="Serviços" description="Acompanhe ordens de serviço, prazos e valores." />} end={<Button label="Adicionar serviço" icon="pi pi-plus" onClick={openNew} />} />
-          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por descrição, cliente, placa ou status" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
-            <Dropdown value={statusFilter} options={statusOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
+          <ManagementFilters
+            search={search}
+            onSearch={setSearch}
+            placeholder="Buscar por descrição, cliente, placa ou status"
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortFieldChange={setSortField}
+            onSortOrderChange={setSortOrder}
+            sortOptions={sortOptions}
+            resultCount={servicosFiltrados.length}
+            hasActiveFilters={Boolean(search || statusFilter || typeFilter)}
+            onClearFilters={() => {
+              setSearch('');
+              setStatusFilter(null);
+              setTypeFilter(null);
+            }}
+          >
+            <Dropdown aria-label="Filtrar serviços por status" value={statusFilter} options={statusOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
+            <Dropdown aria-label="Filtrar serviços por tipo" value={typeFilter} options={serviceTypeOptions} onChange={(event) => setTypeFilter(event.value)} placeholder="Todos os tipos" showClear />
           </ManagementFilters>
 
           <DataTable className="service-table" value={servicosFiltrados} responsiveLayout="stack" breakpoint="768px" emptyMessage="Nenhum serviço encontrado com esses filtros." tableStyle={{ minWidth: '0' }} paginator rows={10}>
        <Column
   header="ID"
-  sortable
   style={{ width: '7%' }}
   body={(rowData) => {
     const index = servicos.findIndex(s => s === rowData) + 1;
@@ -601,13 +628,13 @@ const CrudServico = () => {
   }}
 ></Column>
 
-        <Column field="tipo" header="Tipo" sortable style={{ width: '13%' }}></Column>
-        <Column field="descricao" header="Descrição" sortable style={{ width: '17%' }}></Column>
-        <Column field="maoDeObra" header="Mão de obra" sortable style={{ width: '12%' }} body={(data) => `R$ ${Number(data.maoDeObra || 0).toFixed(2)}`}></Column>
-        <Column field="preco" header="Total" sortable style={{ width: '11%' }} body={(data) => `R$ ${Number(data.preco || 0).toFixed(2)}`}></Column>
-        <Column field="dataPrevista" header="Data prevista" sortable style={{ width: '11%' }} body={(data) => new Date(data.dataPrevista).toLocaleDateString("pt-BR", { timeZone: 'UTC' })}></Column>
+        <Column field="tipo" header="Tipo" style={{ width: '13%' }}></Column>
+        <Column field="descricao" header="Descrição" style={{ width: '17%' }}></Column>
+        <Column field="maoDeObra" header="Mão de obra" style={{ width: '12%' }} body={(data) => `R$ ${Number(data.maoDeObra || 0).toFixed(2)}`}></Column>
+        <Column field="preco" header="Total" style={{ width: '11%' }} body={(data) => `R$ ${Number(data.preco || 0).toFixed(2)}`}></Column>
+        <Column field="dataPrevista" header="Data prevista" style={{ width: '11%' }} body={(data) => new Date(data.dataPrevista).toLocaleDateString("pt-BR", { timeZone: 'UTC' })}></Column>
         <Column body={actionBodyTemplate} style={{ width: '15%' }}></Column>
-        <Column field="status" header="Status" body={statusBodyTemplate} sortable style={{ width: '14%' }}></Column>
+        <Column field="status" header="Status" body={statusBodyTemplate} style={{ width: '14%' }}></Column>
           </DataTable>
         </>
       )}

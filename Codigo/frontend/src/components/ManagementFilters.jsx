@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaFilter, FaSearch, FaSortAmountDown } from 'react-icons/fa';
+import { Button } from 'primereact/button';
 
 const ManagementFilters = ({
     search,
@@ -11,6 +12,9 @@ const ManagementFilters = ({
     onSortFieldChange,
     onSortOrderChange,
     sortOptions = [],
+    resultCount,
+    hasActiveFilters = Boolean(search),
+    onClearFilters,
 }) => (
     <div className="management-filters">
         <div className="management-search">
@@ -55,7 +59,24 @@ const ManagementFilters = ({
                     </div>
                 </div>
             )}
+            {onClearFilters && (
+                <Button
+                    type="button"
+                    className="management-clear-filters"
+                    label="Limpar filtros"
+                    icon="pi pi-filter-slash"
+                    outlined
+                    disabled={!hasActiveFilters}
+                    onClick={onClearFilters}
+                />
+            )}
         </div>
+        {Number.isFinite(resultCount) && (
+            <div className="management-filter-summary" aria-live="polite">
+                <span>{resultCount} {resultCount === 1 ? 'registro encontrado' : 'registros encontrados'}</span>
+                {hasActiveFilters && <span>Filtros aplicados</span>}
+            </div>
+        )}
     </div>
 );
 

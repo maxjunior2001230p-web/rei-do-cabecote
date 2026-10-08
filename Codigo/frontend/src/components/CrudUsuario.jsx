@@ -30,6 +30,7 @@ const CrudUsuario = () => {
   const [usuario, setUsuario] = useState({ id: null, nome: '', email: '', senha: '', cargo: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState(null);
   const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', userSortOptions);
   const toast = useRef(null);
   const loadUsuario = useCallback(async (id) => {
@@ -158,7 +159,10 @@ const CrudUsuario = () => {
     );
   };
 
-  const usuariosFiltrados = sortItems(usuarios.filter((item) => `${item.nome} ${item.email} ${item.cargo}`.toLowerCase().includes(search.toLowerCase())));
+  const usuariosFiltrados = sortItems(usuarios.filter((item) => (
+    `${item.nome} ${item.email} ${item.cargo}`.toLowerCase().includes(search.toLowerCase())
+      && (!roleFilter || item.cargo === roleFilter)
+  )));
 
   return (
     <div className="card">
@@ -167,11 +171,28 @@ const CrudUsuario = () => {
       {!isFormRoute ? (
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Acesso e equipe" title="Usuários" description="Controle os acessos administrativos da oficina." />} end={<Button label="Adicionar usuário" icon="pi pi-plus" onClick={openNew} />} />
-          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por nome, email ou cargo" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions} />
+          <ManagementFilters
+            search={search}
+            onSearch={setSearch}
+            placeholder="Buscar por nome, email ou cargo"
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortFieldChange={setSortField}
+            onSortOrderChange={setSortOrder}
+            sortOptions={sortOptions}
+            resultCount={usuariosFiltrados.length}
+            hasActiveFilters={Boolean(search || roleFilter)}
+            onClearFilters={() => {
+              setSearch('');
+              setRoleFilter(null);
+            }}
+          >
+            <Dropdown aria-label="Filtrar usuários por perfil" value={roleFilter} options={cargos} onChange={(event) => setRoleFilter(event.value)} placeholder="Todos os perfis" showClear />
+          </ManagementFilters>
           <DataTable value={usuariosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum usuário encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-            <Column field="nome" header="Nome" sortable></Column>
-            <Column field="email" header="Email" sortable></Column>
-            <Column field="cargo" header="Cargo" sortable></Column>
+            <Column field="nome" header="Nome"></Column>
+            <Column field="email" header="Email"></Column>
+            <Column field="cargo" header="Cargo"></Column>
             <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
           </DataTable>
         </>

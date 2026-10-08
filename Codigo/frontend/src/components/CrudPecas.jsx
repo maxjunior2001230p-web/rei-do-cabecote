@@ -194,7 +194,10 @@ const CrudPecas = () => {
     return searchable.includes(search.toLowerCase())
       && (!situationFilter || item.situacao === situationFilter)
       && (!supplierFilter || item.fornecedor === supplierFilter)
-      && (!selectedPriceRange || (price >= selectedPriceRange.min && price <= selectedPriceRange.max));
+      && (!selectedPriceRange || (
+        price >= selectedPriceRange.min
+          && (selectedPriceRange.max === Infinity || price < selectedPriceRange.max)
+      ));
   }));
   const hasActiveFilters = Boolean(search || situationFilter || supplierFilter || priceRangeFilter);
 
@@ -204,28 +207,28 @@ const CrudPecas = () => {
       {!isFormRoute ? (
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Estoque e catálogo" title="Peças" description="Cadastre e acompanhe as peças usadas na operação." />} end={<Button label="Adicionar peça" icon="pi pi-plus" onClick={openNew} />} />
-          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por peça, fornecedor ou descrição" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
+          <ManagementFilters
+            search={search}
+            onSearch={setSearch}
+            placeholder="Buscar por peça, fornecedor ou descrição"
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortFieldChange={setSortField}
+            onSortOrderChange={setSortOrder}
+            sortOptions={sortOptions}
+            resultCount={pecasFiltradas.length}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={() => {
+              setSearch('');
+              setSituationFilter(null);
+              setSupplierFilter(null);
+              setPriceRangeFilter(null);
+            }}
+          >
             <Dropdown aria-label="Filtrar por situação" value={situationFilter} options={situacoes} onChange={(event) => setSituationFilter(event.value)} placeholder="Todas as situações" showClear />
             <Dropdown aria-label="Filtrar por fornecedor" value={supplierFilter} options={fornecedores} onChange={(event) => setSupplierFilter(event.value)} placeholder="Todos os fornecedores" showClear />
             <Dropdown aria-label="Filtrar por faixa de preço" value={priceRangeFilter} options={priceRanges} optionLabel="label" optionValue="value" onChange={(event) => setPriceRangeFilter(event.value)} placeholder="Todas as faixas de preço" showClear />
-            <Button
-              className="parts-clear-filters"
-              label="Limpar"
-              icon="pi pi-filter-slash"
-              outlined
-              disabled={!hasActiveFilters}
-              onClick={() => {
-                setSearch('');
-                setSituationFilter(null);
-                setSupplierFilter(null);
-                setPriceRangeFilter(null);
-              }}
-            />
           </ManagementFilters>
-          <div className="parts-filter-summary" aria-live="polite">
-            <span>{pecasFiltradas.length} {pecasFiltradas.length === 1 ? 'peça encontrada' : 'peças encontradas'}</span>
-            {hasActiveFilters && <span>Filtros aplicados</span>}
-          </div>
           <DataTable value={pecasFiltradas} responsiveLayout="scroll" emptyMessage="Nenhuma peça encontrada." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
             <Column field="nome" header="Nome"></Column>
             <Column field="preco" header="Preço" body={priceBodyTemplate}></Column>

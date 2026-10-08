@@ -169,14 +169,29 @@ const CrudFornecedor = () => {
       {!isFormRoute ? (
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Suprimentos" title="Fornecedores" description="Gerencie os parceiros e contatos de fornecimento." />} end={<Button label="Adicionar fornecedor" icon="pi pi-plus" onClick={openNew} />} />
-          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por nome, CNPJ, contato ou categoria" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
-            <Dropdown value={categoryFilter} options={categorias} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas as categorias" showClear />
+          <ManagementFilters
+            search={search}
+            onSearch={setSearch}
+            placeholder="Buscar por nome, CNPJ, contato ou categoria"
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortFieldChange={setSortField}
+            onSortOrderChange={setSortOrder}
+            sortOptions={sortOptions}
+            resultCount={fornecedoresFiltrados.length}
+            hasActiveFilters={Boolean(search || categoryFilter)}
+            onClearFilters={() => {
+              setSearch('');
+              setCategoryFilter(null);
+            }}
+          >
+            <Dropdown aria-label="Filtrar fornecedores por categoria" value={categoryFilter} options={categorias} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas as categorias" showClear />
           </ManagementFilters>
           <DataTable value={fornecedoresFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum fornecedor encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-            <Column field="nome" header="Nome" sortable></Column>
-            <Column field="cnpj" header="CNPJ" sortable></Column>
-            <Column field="contato" header="Contato" sortable></Column>
-            <Column field="categoria" header="Categoria" sortable></Column>
+            <Column field="nome" header="Nome"></Column>
+            <Column field="cnpj" header="CNPJ"></Column>
+            <Column field="contato" header="Contato"></Column>
+            <Column field="categoria" header="Categoria"></Column>
             <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
           </DataTable>
         </>

@@ -9,6 +9,7 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
+import { Dropdown } from 'primereact/dropdown';
 import ManagementFilters from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
@@ -30,6 +31,7 @@ const CrudCliente = () => {
   const [cliente, setCliente] = useState({ id: null, nome: '', cpf: '', endereco: '', telefone: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState('');
+  const [areaCodeFilter, setAreaCodeFilter] = useState(null);
   const toast = useRef(null);
   const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', clientSortOptions);
   
@@ -161,7 +163,16 @@ const CrudCliente = () => {
     );
   };
 
-  const clientesFiltrados = sortItems(clientes.filter((item) => `${item.nome} ${item.cpf} ${item.telefone} ${item.endereco}`.toLowerCase().includes(search.toLowerCase())));
+  const areaCodeOptions = [...new Set(clientes
+    .map((item) => String(item.telefone || '').replace(/\D/g, '').slice(0, 2))
+    .filter((areaCode) => areaCode.length === 2))]
+    .sort((left, right) => Number(left) - Number(right))
+    .map((areaCode) => ({ label: `DDD ${areaCode}`, value: areaCode }));
+  const clientesFiltrados = sortItems(clientes.filter((item) => {
+    const searchable = `${item.nome} ${item.cpf} ${item.telefone} ${item.endereco}`.toLowerCase();
+    const areaCode = String(item.telefone || '').replace(/\D/g, '').slice(0, 2);
+    return searchable.includes(search.toLowerCase()) && (!areaCodeFilter || areaCode === areaCodeFilter);
+  }));
 
   return (
     <div className="card">
@@ -169,13 +180,30 @@ const CrudCliente = () => {
       {!isFormRoute ? (
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Relacionamento" title="Clientes" description="Consulte e mantenha atualizados os clientes da oficina." />} end={<Button label="Adicionar cliente" icon="pi pi-plus" onClick={openNew} />} />
-          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por nome, CPF, telefone ou endereço" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions} />
+          <ManagementFilters
+            search={search}
+            onSearch={setSearch}
+            placeholder="Buscar por nome, CPF, telefone ou endereço"
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortFieldChange={setSortField}
+            onSortOrderChange={setSortOrder}
+            sortOptions={sortOptions}
+            resultCount={clientesFiltrados.length}
+            hasActiveFilters={Boolean(search || areaCodeFilter)}
+            onClearFilters={() => {
+              setSearch('');
+              setAreaCodeFilter(null);
+            }}
+          >
+            <Dropdown aria-label="Filtrar clientes por DDD" value={areaCodeFilter} options={areaCodeOptions} onChange={(event) => setAreaCodeFilter(event.value)} placeholder="Todos os DDDs" showClear disabled={!areaCodeOptions.length} />
+          </ManagementFilters>
 
           <DataTable value={clientesFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum cliente encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-            <Column field="nome" header="Nome" sortable></Column>
-            <Column field="cpf" header="CPF" sortable></Column>
-            <Column field="telefone" header="Telefone" sortable></Column>
-            <Column field="endereco" header="Endereço" sortable></Column>
+            <Column field="nome" header="Nome"></Column>
+            <Column field="cpf" header="CPF"></Column>
+            <Column field="telefone" header="Telefone"></Column>
+            <Column field="endereco" header="Endereço"></Column>
             <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
           </DataTable>
         </>
