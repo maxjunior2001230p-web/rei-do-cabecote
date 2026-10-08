@@ -25,6 +25,13 @@ const partSortOptions = [
   { label: 'Situação', field: 'situacao' },
 ];
 
+const priceRanges = [
+  { label: 'Até R$ 50', value: '0-50', min: 0, max: 50 },
+  { label: 'R$ 50 a R$ 200', value: '50-200', min: 50, max: 200 },
+  { label: 'R$ 200 a R$ 500', value: '200-500', min: 200, max: 500 },
+  { label: 'Acima de R$ 500', value: '500+', min: 500, max: Infinity },
+];
+
 const CrudPecas = () => {
   const [pecas, setPecas] = useState([]);
   const [deletePecaDialog, setDeletePecaDialog] = useState(false);
@@ -32,6 +39,8 @@ const CrudPecas = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState('');
   const [situationFilter, setSituationFilter] = useState(null);
+  const [supplierFilter, setSupplierFilter] = useState(null);
+  const [priceRangeFilter, setPriceRangeFilter] = useState(null);
   const [fornecedores, setFornecedores] = useState([]); // NOVO ESTADO: para armazenar fornecedores
   const toast = useRef(null);
   const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', partSortOptions);
@@ -180,8 +189,14 @@ const CrudPecas = () => {
 
   const pecasFiltradas = sortItems(pecas.filter((item) => {
     const searchable = `${item.nome} ${item.descricao} ${item.fornecedor} ${item.situacao}`.toLowerCase();
-    return searchable.includes(search.toLowerCase()) && (!situationFilter || item.situacao === situationFilter);
+    const price = Number(item.preco) || 0;
+    const selectedPriceRange = priceRanges.find(({ value }) => value === priceRangeFilter);
+    return searchable.includes(search.toLowerCase())
+      && (!situationFilter || item.situacao === situationFilter)
+      && (!supplierFilter || item.fornecedor === supplierFilter)
+      && (!selectedPriceRange || (price >= selectedPriceRange.min && price <= selectedPriceRange.max));
   }));
+  const hasActiveFilters = Boolean(search || situationFilter || supplierFilter || priceRangeFilter);
 
   return (
     <div className="card parts-management-card">
@@ -190,13 +205,32 @@ const CrudPecas = () => {
         <>
           <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Estoque e catálogo" title="Peças" description="Cadastre e acompanhe as peças usadas na operação." />} end={<Button label="Adicionar peça" icon="pi pi-plus" onClick={openNew} />} />
           <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por peça, fornecedor ou descrição" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
-            <Dropdown value={situationFilter} options={situacoes} onChange={(event) => setSituationFilter(event.value)} placeholder="Todas as situações" showClear />
+            <Dropdown aria-label="Filtrar por situação" value={situationFilter} options={situacoes} onChange={(event) => setSituationFilter(event.value)} placeholder="Todas as situações" showClear />
+            <Dropdown aria-label="Filtrar por fornecedor" value={supplierFilter} options={fornecedores} onChange={(event) => setSupplierFilter(event.value)} placeholder="Todos os fornecedores" showClear />
+            <Dropdown aria-label="Filtrar por faixa de preço" value={priceRangeFilter} options={priceRanges} optionLabel="label" optionValue="value" onChange={(event) => setPriceRangeFilter(event.value)} placeholder="Todas as faixas de preço" showClear />
+            <Button
+              className="parts-clear-filters"
+              label="Limpar"
+              icon="pi pi-filter-slash"
+              outlined
+              disabled={!hasActiveFilters}
+              onClick={() => {
+                setSearch('');
+                setSituationFilter(null);
+                setSupplierFilter(null);
+                setPriceRangeFilter(null);
+              }}
+            />
           </ManagementFilters>
+          <div className="parts-filter-summary" aria-live="polite">
+            <span>{pecasFiltradas.length} {pecasFiltradas.length === 1 ? 'peça encontrada' : 'peças encontradas'}</span>
+            {hasActiveFilters && <span>Filtros aplicados</span>}
+          </div>
           <DataTable value={pecasFiltradas} responsiveLayout="scroll" emptyMessage="Nenhuma peça encontrada." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-            <Column field="nome" header="Nome" sortable></Column>
-            <Column field="preco" header="Preço" body={priceBodyTemplate} sortable></Column>
-            <Column field="fornecedor" header="Fornecedor" sortable></Column>
-            <Column field="situacao" header="Situação" sortable></Column>
+            <Column field="nome" header="Nome"></Column>
+            <Column field="preco" header="Preço" body={priceBodyTemplate}></Column>
+            <Column field="fornecedor" header="Fornecedor"></Column>
+            <Column field="situacao" header="Situação"></Column>
             <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
           </DataTable>
         </>
