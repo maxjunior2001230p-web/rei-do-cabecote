@@ -739,12 +739,59 @@
 }
 
 .service-parts-panel .p-multiselect-item {
-  min-height: 44px;
+  min-height: 54px;
   gap: 11px;
-  padding: 10px 11px;
+  padding: 8px 11px;
   border-radius: 8px;
   color: #344258;
   font-size: 0.84rem;
+}
+
+.service-part-option {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-part-option-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.service-part-option-copy strong {
+  overflow: hidden;
+  color: #26364d;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-part-option-copy small {
+  overflow: hidden;
+  color: #748197;
+  font-size: 0.71rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-part-option-price {
+  flex: 0 0 auto;
+  color: #173b72;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.service-parts-hint {
+  display: block;
+  margin-top: 7px;
+  color: #748197;
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .service-parts-panel .p-multiselect-item:not(.p-highlight):hover {

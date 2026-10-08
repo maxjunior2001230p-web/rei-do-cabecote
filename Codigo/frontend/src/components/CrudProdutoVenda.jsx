@@ -18,6 +18,7 @@ import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
 import useManagementSort from '../hooks/useManagementSort';
+import { getMissingRequiredFields } from '../utils/formValidation';
 
 const productSortOptions = [
   { label: 'Nome', field: 'nome' },
@@ -107,9 +108,14 @@ const CrudProdutoVenda = () => {
   };
 
   const saveProdutoVenda = async () => {
-   
-    if (!produtoVenda.nome || !produtoVenda.statusVenda) {
-      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: 'Preencha os campos obrigatórios (Nome, Status)', life: 3000 });
+    const missingFields = getMissingRequiredFields({
+      'Nome do produto': produtoVenda.nome,
+      Estoque: produtoVenda.quantidade,
+      'Preço de venda': produtoVenda.precoVenda,
+      Status: produtoVenda.statusVenda,
+    });
+    if (missingFields.length) {
+      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: `Campos obrigatórios não preenchidos: ${missingFields.join(', ')}.`, life: 5000 });
       return;
     }
 

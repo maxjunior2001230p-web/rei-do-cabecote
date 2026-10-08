@@ -37,6 +37,7 @@ const AdminFormPanel = ({
     </header>
     <form
       className="admin-form"
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();

@@ -33,5 +33,6 @@ public record ServicoDto(
         @NotNull(message = "O tipo de pagamento não pode estar em branco.")
         TipoPagamento tipoPagamento,
 
-        Date garantia
+        Date garantia,
+        String observacoes
 ) { }

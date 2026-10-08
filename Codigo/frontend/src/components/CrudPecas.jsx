@@ -16,6 +16,7 @@ import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
 import useManagementSort from '../hooks/useManagementSort';
+import { getMissingRequiredFields } from '../utils/formValidation';
 
 const partSortOptions = [
   { label: 'Nome', field: 'nome' },
@@ -116,8 +117,13 @@ const CrudPecas = () => {
   };
 
   const savePeca = async () => {
-    if (!peca.nome || !peca.preco || !peca.fornecedor) {
-      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: 'Preencha os campos Nome, Preço e Fornecedor', life: 3000 });
+    const missingFields = getMissingRequiredFields({
+      'Nome da peça': peca.nome,
+      Preço: peca.preco || null,
+      Fornecedor: peca.fornecedor,
+    });
+    if (missingFields.length) {
+      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: `Campos obrigatórios não preenchidos: ${missingFields.join(', ')}.`, life: 5000 });
       return;
     }
 

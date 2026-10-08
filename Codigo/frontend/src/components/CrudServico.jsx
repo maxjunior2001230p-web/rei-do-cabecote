@@ -12,8 +12,6 @@ import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { MultiSelect } from 'primereact/multiselect';
 import ManagementFilters from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
@@ -21,6 +19,8 @@ import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import AdminEntityPicker from './AdminEntityPicker';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
 import useManagementSort from '../hooks/useManagementSort';
+import { getMissingRequiredFields } from '../utils/formValidation';
+import { generateServiceQuotePdf } from '../utils/serviceQuotePdf';
 
 const serviceSortOptions = [
   { label: 'Descrição', field: 'descricao' },
@@ -32,6 +32,8 @@ const serviceSortOptions = [
   { label: 'Mão de obra', field: 'maoDeObra' },
   { label: 'Valor total', field: 'preco' },
 ];
+
+const serviceCurrencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const getGuaranteeMonths = (start, end) => {
   if (!start || !end) return null;
@@ -280,8 +282,20 @@ const CrudServico = () => {
   };
 
   const saveServico = async () => {
-    if (!servico.descricao || !servico.tipo || !servico.dataPrevista || !servico.veiculo || !servico.cliente || !servico.status || !servico.tipoPagamento || !servico.pecas || servico.pecas.length === 0) {
-      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: 'Preencha todos os campos obrigatórios, incluindo ao menos uma peça...', life: 3000 });
+    const missingFields = getMissingRequiredFields({
+      'Tipo de serviço': servico.tipo,
+      Status: servico.status,
+      'Descrição do serviço': servico.descricao,
+      Cliente: servico.cliente,
+      'Veículo / placa': servico.veiculo,
+      'Data prevista': servico.dataPrevista,
+      'Peças do serviço': servico.pecas,
+      'Tipo de pagamento': servico.tipoPagamento,
+      'Período de garantia': garantiaSelecionada,
+      ...((isEditing && servico.status === 'Concluído') ? { 'Data de garantia': servico.garantia } : {}),
+    });
+    if (missingFields.length) {
+      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: `Campos obrigatórios não preenchidos: ${missingFields.join(', ')}.`, life: 5000 });
       return;
     }
 
@@ -348,7 +362,7 @@ const CrudServico = () => {
     }
   };
 
-  const gerarOrcamento = () => {
+  const gerarOrcamento = async () => {
     if (!servico.id) {
       toast.current.show({
         severity: 'error',
@@ -360,243 +374,16 @@ const CrudServico = () => {
     }
 
     try {
-      const s = servico;
-      const descricao = s.descricao || "-";
-      const nomePecas = (s.pecas && s.pecas.length > 0) ? s.pecas.map(p => p.nome).join(", ") : "-";
-      const maoDeObra = s.maoDeObra != null ? Number(s.maoDeObra) : 0;
-      const preco = s.preco != null ? Number(s.preco) : maoDeObra;
-      const clienteNome = s.cliente?.nome || "-";
-      const clienteTelefone = s.cliente?.telefone || "-";
-      const veiculoModelo = s.veiculo?.modelo || "-";
-      const veiculoPlaca = s.veiculo?.placa || "-";
-      const observacoes = s.observacoes?.trim() ? s.observacoes : 'Nenhuma';
-
-      const pagamentoLabels = {
-        'DINHEIRO': 'Dinheiro',
-        'CARTAO_CREDITO': 'Cartão de Crédito',
-        'CARTAO_DEBITO': 'Cartão de Débito',
-        'PIX': 'Pix',
-        'BOLETO': 'Boleto'
-      };
-      const tipoPagamentoLabel = pagamentoLabels[s.tipoPagamento] || s.tipoPagamento || "-";
-
-      const doc = new jsPDF();
-
-      const logoPath = '/src/assets/Logo_Rei_Do_Cabecote.jpg';
-      const logoImg = new window.Image();
-      logoImg.crossOrigin = "anonymous";
-      logoImg.src = logoPath;
-      logoImg.onload = function() {
-        doc.addImage(logoImg, 'JPEG', 20, 10, 28, 28); 
-        doc.setFontSize(20);
-        doc.setTextColor(0, 0, 0);
-        doc.text("Rei do Cabeçote", 55, 20);
-        doc.setFontSize(11);
-        doc.text("Rua Içá, nº 340 – Bairro Renascença", 55, 27);
-        doc.text("Telefone: (31) 98342-6326", 55, 33);
-        doc.setFontSize(18);
-        doc.text("Orçamento de Serviço", 105, 45, { align: "center" });
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(1.2);
-        doc.line(20, 50, 190, 50);
-        doc.setFontSize(13);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Cliente: ${clienteNome}`, 20, 58);
-        doc.text(`Telefone: ${clienteTelefone}`, 20, 64);
-        doc.text(`Veículo: ${veiculoModelo}`, 110, 58);
-        doc.text(`Placa: ${veiculoPlaca}`, 110, 64);
-        doc.setFontSize(12);
-        doc.text(`Data de emissão: ${new Date().toLocaleDateString("pt-BR")}`, 20, 72);
-        // Tabela 1: Tipo de Serviço e Descrição
-        autoTable(doc, {
-          startY: 78,
-          head: [["Tipo de Serviço", "Descrição"]],
-          body: [[s.tipo || "-", descricao]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-        // Tabela 2: Peças e Preço das Peças
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Peças", "Preço"]],
-          body: [[nomePecas, s.pecas && s.pecas.length > 0 ? `R$ ${s.pecas.reduce((acc, p) => acc + (p.preco || 0), 0).toFixed(2)}` : "-"]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-        // Tabela 3: Custo de Mão de Obra
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Custo de Mão de Obra"]],
-          body: [[`R$ ${maoDeObra.toFixed(2)}`]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-        // Tabela 4: Valor Total
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Valor Total"]],
-          body: [[`R$ ${preco.toFixed(2)}`]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 12, cellPadding: 4, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-
-        // Tabela 5: Tipo de Pagamento
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Tipo de Pagamento"]],
-          body: [[tipoPagamentoLabel]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-
-        // Tabela 6: Data de Garantia
-        let garantiaString = '-';
-        if (garantiaSelecionada && servico.dataPrevista) {
-          const dataGarantia = calcularDataGarantia(servico.dataPrevista, garantiaSelecionada);
-          garantiaString = dataGarantia ? new Date(dataGarantia).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-';
-        } else if (servico.garantia) {
-          garantiaString = new Date(servico.garantia).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-        }
-
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Data de Garantia"]],
-          body: [[garantiaString]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-
-        // Observações
-        const obsY = doc.lastAutoTable.finalY + 16; 
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'bold');
-        doc.text('Observações:', 20, obsY);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(11);
-        doc.text(observacoes, 24, obsY + 10, { maxWidth: 162 });
-        doc.save(`orcamento_${s.id}.pdf`);
-      };
-      logoImg.onerror = function() {
-
-        doc.setFontSize(20);
-        doc.setTextColor(0, 0, 0);
-        doc.text("Rei do Cabeçote", 55, 20);
-        doc.setFontSize(11);
-        doc.text("Rua Içá, nº 340 – Bairro Renascença", 55, 27);
-        doc.text("Telefone: (31) 98342-6326", 55, 33);
-        doc.setFontSize(18);
-        doc.text("Orçamento de Serviço", 105, 45, { align: "center" });
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(1.2);
-        doc.line(20, 50, 190, 50);
-        doc.setFontSize(13);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Cliente: ${clienteNome}`, 20, 58);
-        doc.text(`Telefone: ${clienteTelefone}`, 20, 64);
-        doc.text(`Veículo: ${veiculoModelo}`, 110, 58);
-        doc.text(`Placa: ${veiculoPlaca}`, 110, 64);
-        doc.setFontSize(12);
-        doc.text(`Data de emissão: ${new Date().toLocaleDateString("pt-BR")}`, 20, 72);
-        // Tabela 1
-        autoTable(doc, {
-          startY: 78,
-          head: [["Tipo de Serviço", "Descrição"]],
-          body: [[s.tipo || "-", descricao]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-        // Tabela 2
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Peças", "Preço das Peças"]],
-          body: [[nomePecas, s.pecas && s.pecas.length > 0 ? `R$ ${s.pecas.reduce((acc, p) => acc + (p.preco || 0), 0).toFixed(2)}` : "-"]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-        // Tabela 3
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Custo de Mão de Obra"]],
-          body: [[`R$ ${maoDeObra.toFixed(2)}`]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-        // Tabela 4
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Valor Total"]],
-          body: [[`R$ ${preco.toFixed(2)}`]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 12, cellPadding: 4, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Tipo de Pagamento"]],
-          body: [[tipoPagamentoLabel]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-        
-        let garantiaString = '-';
-        if (garantiaSelecionada && servico.dataPrevista) {
-          const dataGarantia = calcularDataGarantia(servico.dataPrevista, garantiaSelecionada);
-          garantiaString = dataGarantia ? new Date(dataGarantia).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-';
-        } else if (servico.garantia) {
-          garantiaString = new Date(servico.garantia).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-        }
-
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Data de Garantia"]],
-          body: [[garantiaString]],
-          theme: 'grid',
-          headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 11, cellPadding: 3, halign: 'center' },
-          margin: { left: 20, right: 20 }
-        });
-
-        const obsY = doc.lastAutoTable.finalY + 16; 
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'bold');
-        doc.text('Observações:', 20, obsY);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(11);
-        doc.text(observacoes, 24, obsY + 10, { maxWidth: 162 });
-        doc.save(`orcamento_${s.id}.pdf`);
-        
-      };
+      const response = await api.get(`/servicos/orcamento/${servico.id}`);
+      await generateServiceQuotePdf(response.data);
+      toast.current.show({ severity: 'success', summary: 'Orçamento gerado', detail: 'PDF criado com os dados salvos do serviço.', life: 3500 });
     } catch (err) {
-      console.error("Erro ao gerar orçamento:", err);
+      console.error('Erro ao gerar orçamento:', err);
       toast.current.show({
         severity: 'error',
         summary: 'Erro',
-        detail: 'Não foi possível gerar o orçamento',
-        life: 3500
+        detail: 'Não foi possível carregar os dados do serviço e gerar o orçamento.',
+        life: 5000,
       });
     }
   };
@@ -635,7 +422,7 @@ const CrudServico = () => {
       {isFormRoute ? (
         <AdminFormPanel
           title={isEditing ? 'Editar ordem de serviço' : 'Nova ordem de serviço'}
-          description="Organize os dados do cliente, a execução, os valores e as condições de pagamento."
+          description="Organize os dados do cliente, a execução, os valores e as condições de pagamento. Salve as alterações antes de gerar o orçamento."
           submitLabel={isEditing ? 'Salvar alterações' : 'Cadastrar serviço'}
           onCancel={hideDialog}
           onSubmit={saveServico}
@@ -734,16 +521,32 @@ const CrudServico = () => {
                   placeholder="Selecione uma ou mais peças"
                   display="comma"
                   filter
-                  filterBy="nome"
                   filterPlaceholder="Buscar peça por nome..."
                   emptyMessage="Nenhuma peça cadastrada para selecionar."
                   emptyFilterMessage="Nenhuma peça encontrada com esse nome."
                   panelClassName="service-parts-panel"
+                  dataKey="id"
+                  virtualScrollerOptions={{ itemSize: 54, delay: 100, showLoader: false }}
+                  itemTemplate={(part) => (
+                    <div className="service-part-option">
+                      <span className="service-part-option-copy">
+                        <strong>{part.nome}</strong>
+                        <small>{[part.descricao, part.fornecedor].filter(Boolean).join(' · ') || 'Sem descrição ou fornecedor'}</small>
+                      </span>
+                      <strong className="service-part-option-price">
+                        {serviceCurrencyFormatter.format(Number(part.preco) || 0)}
+                      </strong>
+                    </div>
+                  )}
+                  filterBy="nome,descricao,fornecedor"
                   showSelectAll={false}
                   maxSelectedLabels={1}
                   selectedItemsLabel="{0} peças selecionadas"
                   required
                 />
+                <small className="service-parts-hint">
+                  {pecas.length} {pecas.length === 1 ? 'peça disponível' : 'peças disponíveis'}; busque por nome, descrição ou fornecedor.
+                </small>
               </div>
               <div className="p-field">
                 <label htmlFor="preco">Valor total</label>

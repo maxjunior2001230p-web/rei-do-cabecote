@@ -82,6 +82,7 @@ public class ServicoContoller {
         );
 
         servico.setCliente(veiculo.getCliente());
+        servico.setObservacoes(servicoDto.observacoes());
 
         ServicoModel salvo = servicoRepository.save(servico);
         return ResponseEntity.status(HttpStatus.CREATED).body(salvo);
@@ -140,6 +141,7 @@ public class ServicoContoller {
         servicoModel.setTipoPagamento(servicoDto.tipoPagamento());
         servicoModel.setVeiculo(veiculo);
         servicoModel.setCliente(veiculo.getCliente());
+        servicoModel.setObservacoes(servicoDto.observacoes());
         servicoModel.setPecas(pecas);
 
         double somaPecas = pecas.stream()

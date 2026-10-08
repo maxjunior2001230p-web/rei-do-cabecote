@@ -60,11 +60,15 @@ public class ServicoServices {
         double total = precoPeca + maoDeObra;
 
         ServicoOrcamentoDto dto = new ServicoOrcamentoDto();
+        dto.setId(servico.getId());
         dto.setDescricao(servico.getDescricao());
         dto.setTipo(servico.getTipo());
         dto.setStatus(servico.getStatus());
         dto.setDataCriacao(servico.getDataCriacao());
         dto.setDataPrevista(servico.getDataPrevista());
+        dto.setGarantia(servico.getGarantia());
+        dto.setTipoPagamento(servico.getTipoPagamento() != null ? servico.getTipoPagamento().name() : null);
+        dto.setObservacoes(servico.getObservacoes());
 
         if (cliente != null) {
             dto.setClienteNome(cliente.getNome());
@@ -75,6 +79,8 @@ public class ServicoServices {
         if (veiculo != null) {
             dto.setVeiculoPlaca(veiculo.getPlaca());
             dto.setVeiculoModelo(veiculo.getModelo());
+            dto.setVeiculoMontadora(veiculo.getMontadora());
+            dto.setVeiculoAnoModelo(veiculo.getAno_modelo());
         }
 
         dto.setPecas(pecasResumo);

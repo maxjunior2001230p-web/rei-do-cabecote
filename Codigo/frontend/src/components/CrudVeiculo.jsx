@@ -17,6 +17,7 @@ import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import AdminEntityPicker from './AdminEntityPicker';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
 import useManagementSort from '../hooks/useManagementSort';
+import { getMissingRequiredFields } from '../utils/formValidation';
 
 const vehicleSortOptions = [
   { label: 'Placa', field: 'placa' },
@@ -161,10 +162,17 @@ const CrudVeiculo = () => {
   };
 
   const saveVeiculo = async () => {
-    
-    if (!veiculo.placa || !veiculo.modelo || !veiculo.montadora ||
-        !veiculo.ano_modelo || !veiculo.ano_fabricacao || !veiculo.cambio || !veiculo.cliente) {
-      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: 'Preencha todos os campos obrigatórios.', life: 3000 });
+    const missingFields = getMissingRequiredFields({
+      Placa: veiculo.placa,
+      Montadora: veiculo.montadora,
+      Modelo: veiculo.modelo,
+      Câmbio: veiculo.cambio,
+      'Ano modelo': veiculo.ano_modelo,
+      'Ano de fabricação': veiculo.ano_fabricacao,
+      Cliente: veiculo.cliente,
+    });
+    if (missingFields.length) {
+      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: `Campos obrigatórios não preenchidos: ${missingFields.join(', ')}.`, life: 5000 });
       return;
     }
 

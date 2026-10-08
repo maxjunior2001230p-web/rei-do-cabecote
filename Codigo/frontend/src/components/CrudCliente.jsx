@@ -14,6 +14,7 @@ import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
 import useManagementSort from '../hooks/useManagementSort';
+import { getMissingRequiredFields } from '../utils/formValidation';
 
 const clientSortOptions = [
   { label: 'Nome', field: 'nome' },
@@ -86,9 +87,14 @@ const CrudCliente = () => {
   };
 
   const saveCliente = async () => {
-
-    if (!cliente.nome || !cliente.cpf || !cliente.endereco || !cliente.telefone) {
-      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: 'Preencha todos os campos obrigatórios', life: 3000 });
+    const missingFields = getMissingRequiredFields({
+      'Nome completo': cliente.nome,
+      CPF: cliente.cpf,
+      Telefone: cliente.telefone,
+      Endereço: cliente.endereco,
+    });
+    if (missingFields.length) {
+      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: `Campos obrigatórios não preenchidos: ${missingFields.join(', ')}.`, life: 5000 });
       return;
     }
 

@@ -16,6 +16,7 @@ import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
 import useManagementSort from '../hooks/useManagementSort';
+import { getMissingRequiredFields } from '../utils/formValidation';
 
 const userSortOptions = [
   { label: 'Nome', field: 'nome' },
@@ -89,8 +90,14 @@ const CrudUsuario = () => {
   };
 
   const saveUsuario = async () => {
-    if (!usuario.nome || !usuario.email || (!isEditing && !usuario.senha) || !usuario.cargo) {
-      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: 'Preencha todos os campos obrigatórios', life: 3000 });
+    const missingFields = getMissingRequiredFields({
+      'Nome completo': usuario.nome,
+      'E-mail': usuario.email,
+      ...(!isEditing ? { Senha: usuario.senha } : {}),
+      'Perfil de acesso': usuario.cargo,
+    });
+    if (missingFields.length) {
+      toast.current.show({ severity: 'warn', summary: 'Atenção', detail: `Campos obrigatórios não preenchidos: ${missingFields.join(', ')}.`, life: 5000 });
       return;
     }
 

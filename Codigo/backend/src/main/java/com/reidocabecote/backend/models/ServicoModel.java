@@ -34,6 +34,7 @@ public class ServicoModel implements java.io.Serializable{
     private Double maoDeObra;
     private TipoPagamento tipoPagamento;
     private Date garantia;
+    private String observacoes;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
@@ -202,5 +203,13 @@ public class ServicoModel implements java.io.Serializable{
 
     public void setGarantia(Date garantia) {
         this.garantia = garantia;
+    }
+
+    public String getObservacoes() {
+        return observacoes;
+    }
+
+    public void setObservacoes(String observacoes) {
+        this.observacoes = observacoes;
     }
 }
