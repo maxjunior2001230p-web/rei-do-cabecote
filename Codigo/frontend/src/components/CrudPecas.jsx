@@ -11,7 +11,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
-import ManagementFilters from './ManagementFilters';
+import ManagementFilters, { ManagementFilterField } from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
@@ -225,9 +225,15 @@ const CrudPecas = () => {
               setPriceRangeFilter(null);
             }}
           >
-            <Dropdown aria-label="Filtrar por situação" value={situationFilter} options={situacoes} onChange={(event) => setSituationFilter(event.value)} placeholder="Todas as situações" showClear />
-            <Dropdown aria-label="Filtrar por fornecedor" value={supplierFilter} options={fornecedores} onChange={(event) => setSupplierFilter(event.value)} placeholder="Todos os fornecedores" showClear />
-            <Dropdown aria-label="Filtrar por faixa de preço" value={priceRangeFilter} options={priceRanges} optionLabel="label" optionValue="value" onChange={(event) => setPriceRangeFilter(event.value)} placeholder="Todas as faixas de preço" showClear />
+            <ManagementFilterField label="Situação">
+              <Dropdown inputId="parts-situation-filter" aria-label="Filtrar por situação" value={situationFilter} options={situacoes} onChange={(event) => setSituationFilter(event.value)} placeholder="Todas" showClear />
+            </ManagementFilterField>
+            <ManagementFilterField label="Fornecedor">
+              <Dropdown inputId="parts-supplier-filter" aria-label="Filtrar por fornecedor" value={supplierFilter} options={fornecedores} onChange={(event) => setSupplierFilter(event.value)} placeholder="Todos" showClear />
+            </ManagementFilterField>
+            <ManagementFilterField label="Faixa de preço">
+              <Dropdown inputId="parts-price-filter" aria-label="Filtrar por faixa de preço" value={priceRangeFilter} options={priceRanges} optionLabel="label" optionValue="value" onChange={(event) => setPriceRangeFilter(event.value)} placeholder="Qualquer faixa" showClear />
+            </ManagementFilterField>
           </ManagementFilters>
           <DataTable value={pecasFiltradas} responsiveLayout="scroll" emptyMessage="Nenhuma peça encontrada." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
             <Column field="nome" header="Nome"></Column>

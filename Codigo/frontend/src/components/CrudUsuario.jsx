@@ -11,7 +11,7 @@ import { InputText } from 'primereact/inputtext';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
-import ManagementFilters from './ManagementFilters';
+import ManagementFilters, { ManagementFilterField } from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
@@ -187,7 +187,9 @@ const CrudUsuario = () => {
               setRoleFilter(null);
             }}
           >
-            <Dropdown aria-label="Filtrar usuários por perfil" value={roleFilter} options={cargos} onChange={(event) => setRoleFilter(event.value)} placeholder="Todos os perfis" showClear />
+            <ManagementFilterField label="Perfil">
+              <Dropdown aria-label="Filtrar usuários por perfil" value={roleFilter} options={cargos} onChange={(event) => setRoleFilter(event.value)} placeholder="Todos" showClear />
+            </ManagementFilterField>
           </ManagementFilters>
           <DataTable value={usuariosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum usuário encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
             <Column field="nome" header="Nome"></Column>

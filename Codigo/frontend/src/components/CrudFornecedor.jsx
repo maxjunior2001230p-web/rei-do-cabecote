@@ -11,7 +11,7 @@ import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
 import { InputMask } from 'primereact/inputmask'; // 1. Importar o InputMask
-import ManagementFilters from './ManagementFilters';
+import ManagementFilters, { ManagementFilterField } from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
@@ -185,7 +185,9 @@ const CrudFornecedor = () => {
               setCategoryFilter(null);
             }}
           >
-            <Dropdown aria-label="Filtrar fornecedores por categoria" value={categoryFilter} options={categorias} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas as categorias" showClear />
+            <ManagementFilterField label="Categoria">
+              <Dropdown aria-label="Filtrar fornecedores por categoria" value={categoryFilter} options={categorias} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas" showClear />
+            </ManagementFilterField>
           </ManagementFilters>
           <DataTable value={fornecedoresFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum fornecedor encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
             <Column field="nome" header="Nome"></Column>

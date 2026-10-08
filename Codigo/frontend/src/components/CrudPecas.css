@@ -108,16 +108,8 @@
 
 .admin-main .parts-management-card .management-filter-selects {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  gap: 8px;
-}
-
-.admin-main .parts-management-card .management-filter-selects > .p-dropdown {
-  min-width: 0;
-  min-height: 42px;
-  border-color: #e5d9c6;
-  border-radius: 9px;
-  background: #fff;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .admin-main .parts-management-card .management-sort-controls {
@@ -169,9 +161,10 @@
     border-left: 0;
   }
 
-  .admin-main .parts-management-card .management-filter-selects > .p-dropdown {
-    min-width: 0;
+  .admin-main .parts-management-card .management-filter-selects {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   }
+
 }
 
 @media (max-width: 700px) {
@@ -183,7 +176,7 @@
     grid-template-columns: 1fr;
   }
 
-  .admin-main .parts-management-card .management-filter-selects > .p-dropdown,
+  .admin-main .parts-management-card .management-filter-field > .p-dropdown,
   .admin-main .parts-management-card .management-clear-filters {
     width: 100%;
   }
@@ -191,9 +184,5 @@
   .admin-main .parts-management-card .management-sort-fields {
     display: grid;
     grid-template-columns: 1fr;
-  }
-
-  .admin-main .parts-management-card .parts-filter-summary {
-    padding: 0 16px;
   }
 }

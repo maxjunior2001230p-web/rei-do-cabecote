@@ -13,7 +13,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { MultiSelect } from 'primereact/multiselect';
-import ManagementFilters from './ManagementFilters';
+import ManagementFilters, { ManagementFilterField } from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import AdminEntityPicker from './AdminEntityPicker';
@@ -614,8 +614,12 @@ const CrudServico = () => {
               setTypeFilter(null);
             }}
           >
-            <Dropdown aria-label="Filtrar serviços por status" value={statusFilter} options={statusOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
-            <Dropdown aria-label="Filtrar serviços por tipo" value={typeFilter} options={serviceTypeOptions} onChange={(event) => setTypeFilter(event.value)} placeholder="Todos os tipos" showClear />
+            <ManagementFilterField label="Status">
+              <Dropdown aria-label="Filtrar serviços por status" value={statusFilter} options={statusOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos" showClear />
+            </ManagementFilterField>
+            <ManagementFilterField label="Tipo de serviço">
+              <Dropdown aria-label="Filtrar serviços por tipo" value={typeFilter} options={serviceTypeOptions} onChange={(event) => setTypeFilter(event.value)} placeholder="Todos" showClear />
+            </ManagementFilterField>
           </ManagementFilters>
 
           <DataTable className="service-table" value={servicosFiltrados} responsiveLayout="stack" breakpoint="768px" emptyMessage="Nenhum serviço encontrado com esses filtros." tableStyle={{ minWidth: '0' }} paginator rows={10}>

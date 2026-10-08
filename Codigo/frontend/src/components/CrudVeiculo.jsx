@@ -11,7 +11,7 @@ import { InputMask } from 'primereact/inputmask';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
-import ManagementFilters from './ManagementFilters';
+import ManagementFilters, { ManagementFilterField } from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import AdminEntityPicker from './AdminEntityPicker';
@@ -265,9 +265,15 @@ const CrudVeiculo = () => {
               setOwnerFilter(null);
             }}
           >
-            <Dropdown aria-label="Filtrar veículos por montadora" value={makeFilter} options={makeFilterOptions} onChange={(event) => setMakeFilter(event.value)} placeholder="Todas as montadoras" showClear />
-            <Dropdown aria-label="Filtrar veículos por câmbio" value={transmissionFilter} options={cambios} onChange={(event) => setTransmissionFilter(event.value)} placeholder="Todos os câmbios" showClear />
-            <Dropdown aria-label="Filtrar veículos por cliente" value={ownerFilter} options={ownerFilterOptions} onChange={(event) => setOwnerFilter(event.value)} placeholder="Todos os clientes" showClear disabled={!ownerFilterOptions.length} />
+            <ManagementFilterField label="Montadora">
+              <Dropdown aria-label="Filtrar veículos por montadora" value={makeFilter} options={makeFilterOptions} onChange={(event) => setMakeFilter(event.value)} placeholder="Todas" showClear />
+            </ManagementFilterField>
+            <ManagementFilterField label="Câmbio">
+              <Dropdown aria-label="Filtrar veículos por câmbio" value={transmissionFilter} options={cambios} onChange={(event) => setTransmissionFilter(event.value)} placeholder="Todos" showClear />
+            </ManagementFilterField>
+            <ManagementFilterField label="Cliente">
+              <Dropdown aria-label="Filtrar veículos por cliente" value={ownerFilter} options={ownerFilterOptions} onChange={(event) => setOwnerFilter(event.value)} placeholder="Todos" showClear disabled={!ownerFilterOptions.length} />
+            </ManagementFilterField>
           </ManagementFilters>
           <DataTable value={veiculosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum veículo encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
             <Column field="placa" header="Placa"></Column>

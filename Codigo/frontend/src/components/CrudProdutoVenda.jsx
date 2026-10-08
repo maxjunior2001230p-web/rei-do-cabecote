@@ -13,7 +13,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { FileUpload } from 'primereact/fileupload';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
-import ManagementFilters from './ManagementFilters';
+import ManagementFilters, { ManagementFilterField } from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
@@ -323,9 +323,15 @@ const CrudProdutoVenda = () => {
               setStockFilter(null);
             }}
           >
-            <Dropdown aria-label="Filtrar produtos por categoria" value={categoryFilter} options={categoryOptions} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas as categorias" showClear disabled={!categoryOptions.length} />
-            <Dropdown aria-label="Filtrar produtos por disponibilidade" value={statusFilter} options={statusVendaOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
-            <Dropdown aria-label="Filtrar produtos por estoque" value={stockFilter} options={stockFilterOptions} onChange={(event) => setStockFilter(event.value)} placeholder="Qualquer estoque" showClear />
+            <ManagementFilterField label="Categoria">
+              <Dropdown aria-label="Filtrar produtos por categoria" value={categoryFilter} options={categoryOptions} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas" showClear disabled={!categoryOptions.length} />
+            </ManagementFilterField>
+            <ManagementFilterField label="Disponibilidade">
+              <Dropdown aria-label="Filtrar produtos por disponibilidade" value={statusFilter} options={statusVendaOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos" showClear />
+            </ManagementFilterField>
+            <ManagementFilterField label="Estoque">
+              <Dropdown aria-label="Filtrar produtos por estoque" value={stockFilter} options={stockFilterOptions} onChange={(event) => setStockFilter(event.value)} placeholder="Qualquer" showClear />
+            </ManagementFilterField>
           </ManagementFilters>
           <DataTable value={produtosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum produto encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
             <Column field="nome" header="Nome"></Column>

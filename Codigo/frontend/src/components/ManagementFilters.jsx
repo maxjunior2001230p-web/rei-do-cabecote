@@ -2,6 +2,13 @@ import React from 'react';
 import { FaFilter, FaSearch, FaSortAmountDown } from 'react-icons/fa';
 import { Button } from 'primereact/button';
 
+export const ManagementFilterField = ({ label, children }) => (
+    <div className="management-filter-field">
+        <span>{label}</span>
+        {children}
+    </div>
+);
+
 const ManagementFilters = ({
     search,
     onSearch,

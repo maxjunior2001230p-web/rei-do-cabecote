@@ -10,7 +10,7 @@ import { InputText } from 'primereact/inputtext';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
-import ManagementFilters from './ManagementFilters';
+import ManagementFilters, { ManagementFilterField } from './ManagementFilters';
 import AdminPageHeading from './AdminPageHeading';
 import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
 import useAdminFormRoute from '../hooks/useAdminFormRoute';
@@ -196,7 +196,9 @@ const CrudCliente = () => {
               setAreaCodeFilter(null);
             }}
           >
-            <Dropdown aria-label="Filtrar clientes por DDD" value={areaCodeFilter} options={areaCodeOptions} onChange={(event) => setAreaCodeFilter(event.value)} placeholder="Todos os DDDs" showClear disabled={!areaCodeOptions.length} />
+            <ManagementFilterField label="DDD">
+              <Dropdown aria-label="Filtrar clientes por DDD" value={areaCodeFilter} options={areaCodeOptions} onChange={(event) => setAreaCodeFilter(event.value)} placeholder="Todos" showClear disabled={!areaCodeOptions.length} />
+            </ManagementFilterField>
           </ManagementFilters>
 
           <DataTable value={clientesFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum cliente encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
