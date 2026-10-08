@@ -1,7 +1,17 @@
 import React from 'react';
-import { FaFilter, FaSearch } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaSortAmountDown } from 'react-icons/fa';
 
-const ManagementFilters = ({ search, onSearch, placeholder, children }) => (
+const ManagementFilters = ({
+    search,
+    onSearch,
+    placeholder,
+    children,
+    sortField,
+    sortOrder,
+    onSortFieldChange,
+    onSortOrderChange,
+    sortOptions = [],
+}) => (
     <div className="management-filters">
         <div className="management-search">
             <FaSearch aria-hidden="true" />
@@ -12,13 +22,40 @@ const ManagementFilters = ({ search, onSearch, placeholder, children }) => (
                 placeholder={placeholder}
                 aria-label={placeholder}
             />
+            {search && (
+                <button type="button" onClick={() => onSearch('')} aria-label="Limpar busca" title="Limpar busca">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            )}
         </div>
-        {children && (
+        <div className="management-filter-tools">
+            {children && (
             <div className="management-filter-options">
-                <FaFilter aria-hidden="true" />
-                {children}
+                <span className="management-control-caption">
+                    <FaFilter aria-hidden="true" />
+                    <span>Filtrar por</span>
+                </span>
+                <div className="management-filter-selects">{children}</div>
             </div>
-        )}
+            )}
+            {sortOptions.length > 0 && (
+                <div className="management-sort-controls">
+                    <span className="management-control-caption">
+                        <FaSortAmountDown aria-hidden="true" />
+                        <span>Ordenar</span>
+                    </span>
+                    <div className="management-sort-fields">
+                        <select value={sortField} onChange={(event) => onSortFieldChange(event.target.value)} aria-label="Ordenar por">
+                            {sortOptions.map(({ label, field }) => <option key={field} value={field}>{label}</option>)}
+                        </select>
+                        <select value={sortOrder} onChange={(event) => onSortOrderChange(Number(event.target.value))} aria-label="Direção da ordenação">
+                            <option value={1}>Crescente</option>
+                            <option value={-1}>Decrescente</option>
+                        </select>
+                    </div>
+                </div>
+            )}
+        </div>
     </div>
 );
 

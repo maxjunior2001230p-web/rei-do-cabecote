@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import './CrudPecas.css';
 
@@ -12,10 +12,20 @@ import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
 import ManagementFilters from './ManagementFilters';
+import AdminPageHeading from './AdminPageHeading';
+import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
+import useAdminFormRoute from '../hooks/useAdminFormRoute';
+import useManagementSort from '../hooks/useManagementSort';
+
+const partSortOptions = [
+  { label: 'Nome', field: 'nome' },
+  { label: 'Preço', field: 'preco' },
+  { label: 'Fornecedor', field: 'fornecedor' },
+  { label: 'Situação', field: 'situacao' },
+];
 
 const CrudPecas = () => {
   const [pecas, setPecas] = useState([]);
-  const [pecaDialog, setPecaDialog] = useState(false);
   const [deletePecaDialog, setDeletePecaDialog] = useState(false);
   const [peca, setPeca] = useState({ id: null, nome: '', descricao: '', preco: 0, fornecedor: '', situacao: '' });
   const [isEditing, setIsEditing] = useState(false);
@@ -23,6 +33,23 @@ const CrudPecas = () => {
   const [situationFilter, setSituationFilter] = useState(null);
   const [fornecedores, setFornecedores] = useState([]); // NOVO ESTADO: para armazenar fornecedores
   const toast = useRef(null);
+  const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', partSortOptions);
+  const loadPeca = useCallback(async (id) => {
+    const response = await api.get('/pecas');
+    return response.data.find((item) => String(item.id) === id);
+  }, []);
+  const onFormLoadError = useCallback((error) => {
+    console.error('Erro ao carregar peça:', error);
+    toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível carregar a peça.', life: 3000 });
+  }, []);
+  const { isFormRoute, openNew: openNewRoute, openEdit, closeForm, finishSave } = useAdminFormRoute({
+    basePath: '/pecas',
+    emptyValue: { id: null, nome: '', descricao: '', preco: 0, fornecedor: '', situacao: 'Em cadastro' },
+    setValue: setPeca,
+    setIsEditing,
+    loadById: loadPeca,
+    onLoadError: onFormLoadError,
+  });
 
   const situacoes = [
     { label: 'Ativo', value: 'Ativo' },
@@ -59,25 +86,15 @@ const CrudPecas = () => {
     }
   };
 
-  const openNew = () => {
-    setPeca({ id: null, nome: '', descricao: '', preco: 0, fornecedor: '', situacao: 'Em cadastro' });
-    setIsEditing(false);
-    setPecaDialog(true);
-  };
+  const openNew = openNewRoute;
 
-  const hideDialog = () => {
-    setPecaDialog(false);
-  };
+  const hideDialog = closeForm;
 
   const hideDeletePecaDialog = () => {
     setDeletePecaDialog(false);
   };
 
-  const editPeca = (peca) => {
-    setPeca({ ...peca });
-    setIsEditing(true);
-    setPecaDialog(true);
-  };
+  const editPeca = openEdit;
 
   const confirmDeletePeca = (peca) => {
     setPeca(peca);
@@ -117,7 +134,7 @@ const CrudPecas = () => {
         await api.post('/pecas', _peca);
         toast.current.show({ severity: 'success', summary: 'Sucesso', detail: 'Peça Criada', life: 3000 });
       }
-      setPecaDialog(false);
+      finishSave();
       buscarPecas();
     } catch {
       toast.current.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível salvar a peça', life: 3000 });
@@ -135,25 +152,18 @@ const CrudPecas = () => {
     }
   };
 
-  const pecaDialogFooter = (
-    <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Cancelar" icon="pi pi-times" outlined onClick={hideDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Salvar" icon="pi pi-check" onClick={savePeca} />
-    </React.Fragment>
-  );
-
   const deletePecaDialogFooter = (
     <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Não" icon="pi pi-times" outlined onClick={hideDeletePecaDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Sim" icon="pi pi-check" severity="danger" onClick={deletePeca} />
+      <Button label="Não" icon="pi pi-times" outlined onClick={hideDeletePecaDialog} />
+      <Button label="Sim" icon="pi pi-check" severity="danger" onClick={deletePeca} />
     </React.Fragment>
   );
 
   const actionBodyTemplate = (rowData) => {
     return (
       <React.Fragment>
-        <Button style={{ backgroundColor: '#000000', color: 'white' }} icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editPeca(rowData)} />
-        <Button style={{ backgroundColor: '#000000', color: 'red' }} icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeletePeca(rowData)} />
+        <Button icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editPeca(rowData)} />
+        <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeletePeca(rowData)} />
       </React.Fragment>
     );
   };
@@ -162,75 +172,66 @@ const CrudPecas = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(rowData.preco);
   };
 
-  const pecasFiltradas = pecas.filter((item) => {
+  const pecasFiltradas = sortItems(pecas.filter((item) => {
     const searchable = `${item.nome} ${item.descricao} ${item.fornecedor} ${item.situacao}`.toLowerCase();
     return searchable.includes(search.toLowerCase()) && (!situationFilter || item.situacao === situationFilter);
-  });
+  }));
 
   return (
     <div className="card parts-management-card">
       <Toast ref={toast} />
-      <Toolbar className="p-mb-4" start={<div className="screen-heading"><span className="screen-kicker">Catálogo</span><h2 className="titulo">Peças</h2><p>Cadastre e acompanhe as peças usadas na operação.</p></div>} end={<Button className="primary-action" label="Adicionar peça" icon="pi pi-plus" onClick={openNew} />} />
-      <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por peça, fornecedor ou descrição">
-        <Dropdown value={situationFilter} options={situacoes} onChange={(event) => setSituationFilter(event.value)} placeholder="Todas as situações" showClear />
-      </ManagementFilters>
-
-      <DataTable value={pecasFiltradas} responsiveLayout="scroll" emptyMessage="Nenhuma peça encontrada." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-        <Column field="nome" header="Nome" sortable></Column>
-        <Column field="preco" header="Preço" body={priceBodyTemplate} sortable></Column>
-        <Column field="fornecedor" header="Fornecedor" sortable></Column>
-        <Column field="situacao" header="Situação" sortable></Column>
-        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
-      </DataTable>
-
-      <Dialog
-        visible={pecaDialog}
-        style={{ width: '450px' }}
-        header={isEditing ? "Editar Peça" : "Adicionar Peça"}
-        modal
-        className="p-fluid form-dialog parts-dialog"
-        footer={pecaDialogFooter}
-        onHide={hideDialog}
-        closable={true}
-        closeIcon="pi pi-times"
-      >
-        <div className="parts-form-grid">
-        <div className="p-field">
-          <label htmlFor="nome">Nome</label>
-          <InputText id="nome" value={peca.nome} onChange={(e) => onInputChange(e, 'nome')} placeholder="Ex.: Junta do cabeçote" required autoFocus />
-        </div>
-        <div className="p-field">
-          <label htmlFor="descricao">Descrição</label>
-          <InputText id="descricao" value={peca.descricao} onChange={(e) => onInputChange(e, 'descricao')} placeholder="Detalhes ou aplicação da peça" />
-        </div>
-        <div className="p-field">
-          <label htmlFor="preco">Preço</label>
-          <InputNumber id="preco" value={peca.preco} onValueChange={(e) => onInputNumberChange(e, 'preco')} mode="currency" currency="BRL" locale="pt-BR" placeholder="R$ 0,00" />
-        </div>
-        
-        {/* ATUALIZADO: Input de Fornecedor agora é um Dropdown */}
-        <div className="p-field">
-          <label htmlFor="fornecedor">Fornecedor</label>
-          <Dropdown
-            id="fornecedor"
-            value={peca.fornecedor}
-            options={fornecedores}
-            onChange={(e) => onInputChange(e, 'fornecedor')}
-            placeholder="Selecione o Fornecedor"
-            required
-          />
-        </div>
-
-        <div className="p-field">
-          <label htmlFor="situacao">Situação</label>
-          {isEditing ? (
-            <Dropdown id="situacao" value={peca.situacao} options={situacoes} onChange={(e) => onInputChange(e, 'situacao')} placeholder="Selecione a situação" />
-          ) : (
-            <InputText style={{padding: '8px'}} id="situacao" value={peca.situacao} disabled />
-          )}
-        </div>
-        </div>
-      </Dialog>
+      {!isFormRoute ? (
+        <>
+          <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Estoque e catálogo" title="Peças" description="Cadastre e acompanhe as peças usadas na operação." />} end={<Button label="Adicionar peça" icon="pi pi-plus" onClick={openNew} />} />
+          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por peça, fornecedor ou descrição" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
+            <Dropdown value={situationFilter} options={situacoes} onChange={(event) => setSituationFilter(event.value)} placeholder="Todas as situações" showClear />
+          </ManagementFilters>
+          <DataTable value={pecasFiltradas} responsiveLayout="scroll" emptyMessage="Nenhuma peça encontrada." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
+            <Column field="nome" header="Nome" sortable></Column>
+            <Column field="preco" header="Preço" body={priceBodyTemplate} sortable></Column>
+            <Column field="fornecedor" header="Fornecedor" sortable></Column>
+            <Column field="situacao" header="Situação" sortable></Column>
+            <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
+          </DataTable>
+        </>
+      ) : (
+        <AdminFormPanel
+          title={isEditing ? 'Editar peça' : 'Nova peça'}
+          description="Registre os dados comerciais e o fornecedor responsável pela peça."
+          submitLabel={isEditing ? 'Salvar alterações' : 'Cadastrar peça'}
+          onCancel={hideDialog}
+          onSubmit={savePeca}
+        >
+          <AdminFormSection title="Informações da peça" description="Descreva o item e defina seu preço de referência.">
+            <div className="admin-form-grid">
+              <div className="p-field admin-form-wide">
+                <label htmlFor="nome">Nome da peça *</label>
+                <InputText id="nome" value={peca.nome} onChange={(e) => onInputChange(e, 'nome')} placeholder="Ex.: Junta do cabeçote" required autoFocus />
+              </div>
+              <div className="p-field admin-form-wide">
+                <label htmlFor="descricao">Descrição</label>
+                <InputText id="descricao" value={peca.descricao} onChange={(e) => onInputChange(e, 'descricao')} placeholder="Detalhes ou aplicação da peça" />
+              </div>
+              <div className="p-field">
+                <label htmlFor="preco">Preço *</label>
+                <InputNumber id="preco" value={peca.preco} onValueChange={(e) => onInputNumberChange(e, 'preco')} mode="currency" currency="BRL" locale="pt-BR" placeholder="R$ 0,00" />
+              </div>
+              <div className="p-field">
+                <label htmlFor="fornecedor">Fornecedor *</label>
+                <Dropdown id="fornecedor" value={peca.fornecedor} options={fornecedores} onChange={(e) => onInputChange(e, 'fornecedor')} placeholder="Selecione o fornecedor" required />
+              </div>
+              <div className="p-field">
+                <label htmlFor="situacao">Situação</label>
+                {isEditing ? (
+                  <Dropdown id="situacao" value={peca.situacao} options={situacoes} onChange={(e) => onInputChange(e, 'situacao')} placeholder="Selecione a situação" />
+                ) : (
+                  <InputText id="situacao" value={peca.situacao} disabled />
+                )}
+              </div>
+            </div>
+          </AdminFormSection>
+        </AdminFormPanel>
+      )}
 
       <Dialog visible={deletePecaDialog} style={{ width: '450px' }} header="Confirmação" modal footer={deletePecaDialogFooter} onHide={hideDeletePecaDialog} closable={true} closeIcon="pi pi-times">
         <div className="confirmation-content">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api'; 
 import './CrudUsuario.css'; 
 
@@ -14,6 +14,18 @@ import { FileUpload } from 'primereact/fileupload';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import ManagementFilters from './ManagementFilters';
+import AdminPageHeading from './AdminPageHeading';
+import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
+import useAdminFormRoute from '../hooks/useAdminFormRoute';
+import useManagementSort from '../hooks/useManagementSort';
+
+const productSortOptions = [
+  { label: 'Nome', field: 'nome' },
+  { label: 'Preço', field: 'precoVenda' },
+  { label: 'Estoque', field: 'quantidade' },
+  { label: 'Status', field: 'statusVenda' },
+  { label: 'Categoria', field: 'categoria' },
+];
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://rei-do-cabecote-production.up.railway.app';
 
@@ -21,7 +33,6 @@ const CrudProdutoVenda = () => {
   
   const [produtosVenda, setProdutosVenda] = useState([]);
 
-  const [produtoVendaDialog, setProdutoVendaDialog] = useState(false);
   const [deleteProdutoVendaDialog, setDeleteProdutoVendaDialog] = useState(false);
 
   const [produtoVenda, setProdutoVenda] = useState({
@@ -49,14 +60,35 @@ const CrudProdutoVenda = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState(null);
+  const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', productSortOptions);
   const toast = useRef(null);
   const fileUploadRef = useRef(null); 
+  const loadProduto = useCallback(async (id) => {
+    const response = await api.get('/produtosvenda');
+    return response.data.find((item) => String(item.id) === id);
+  }, []);
+  const onFormLoadError = useCallback((error) => {
+    console.error('Erro ao carregar produto:', error);
+    toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível carregar o produto.', life: 3000 });
+  }, []);
+  const { isFormRoute, openNew: openNewRoute, openEdit, closeForm, finishSave } = useAdminFormRoute({
+    basePath: '/produtos-venda',
+    emptyValue: emptyProdutoVenda,
+    setValue: setProdutoVenda,
+    setIsEditing,
+    loadById: loadProduto,
+    onLoadError: onFormLoadError,
+  });
 
  
   const statusVendaOptions = [
     { label: 'Disponível', value: 'DISPONIVEL' },
     { label: 'Vendido', value: 'VENDIDO' },
   ];
+  const categoryOptions = [...new Set(produtosVenda.map((item) => item.categoria?.trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }))
+    .map((category) => ({ label: category, value: category }));
 
   
   useEffect(() => {
@@ -118,7 +150,7 @@ const CrudProdutoVenda = () => {
         toast.current.show({ severity: 'info', summary: 'Info', detail: 'Imagem enviada com sucesso', life: 3000 });
       }
 
-      setProdutoVendaDialog(false);
+      finishSave();
       setSelectedFile(null); 
       buscarProdutosVenda(); 
     } catch (error) {
@@ -161,27 +193,21 @@ const CrudProdutoVenda = () => {
  
 
   const openNew = () => {
-    setProdutoVenda(emptyProdutoVenda);
     setSelectedFile(null);
     if (fileUploadRef.current) fileUploadRef.current.clear(); 
-    setIsEditing(false);
-    setProdutoVendaDialog(true);
+    openNewRoute();
   };
 
-  const hideDialog = () => {
-    setProdutoVendaDialog(false);
-  };
+  const hideDialog = closeForm;
 
   const hideDeleteProdutoVendaDialog = () => {
     setDeleteProdutoVendaDialog(false);
   };
 
   const editProdutoVenda = (produto) => {
-    setProdutoVenda({ ...produto }); 
     setSelectedFile(null);
     if (fileUploadRef.current) fileUploadRef.current.clear();
-    setIsEditing(true);
-    setProdutoVendaDialog(true);
+    openEdit(produto);
   };
 
   const confirmDeleteProdutoVenda = (produto) => {
@@ -226,17 +252,10 @@ const CrudProdutoVenda = () => {
   }
 
  
-  const produtoVendaDialogFooter = (
-    <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Cancelar" icon="pi pi-times" outlined onClick={hideDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Salvar" icon="pi pi-check" onClick={saveProdutoVenda} />
-    </React.Fragment>
-  );
-
   const deleteProdutoVendaDialogFooter = (
     <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Não" icon="pi pi-times" outlined onClick={hideDeleteProdutoVendaDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Sim" icon="pi pi-check" severity="danger" onClick={deleteProdutoVenda} />
+      <Button label="Não" icon="pi pi-times" outlined onClick={hideDeleteProdutoVendaDialog} />
+      <Button label="Sim" icon="pi pi-check" severity="danger" onClick={deleteProdutoVenda} />
     </React.Fragment>
   );
 
@@ -244,8 +263,8 @@ const CrudProdutoVenda = () => {
   const actionBodyTemplate = (rowData) => {
     return (
       <React.Fragment>
-        <Button style={{ backgroundColor: '#000000', color: 'white' }} icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editProdutoVenda(rowData)} />
-        <Button style={{ backgroundColor: '#000000', color: 'red' }} icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteProdutoVenda(rowData)} />
+        <Button icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editProdutoVenda(rowData)} />
+        <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteProdutoVenda(rowData)} />
       </React.Fragment>
     );
   };
@@ -260,128 +279,110 @@ const CrudProdutoVenda = () => {
     return formatCurrency(rowData.precoVenda);
   };
 
-  const produtosFiltrados = produtosVenda.filter((item) => {
+  const produtosFiltrados = sortItems(produtosVenda.filter((item) => {
     const searchable = `${item.nome} ${item.descricao} ${item.categoria} ${item.statusVenda}`.toLowerCase();
-    return searchable.includes(search.toLowerCase()) && (!statusFilter || item.statusVenda === statusFilter);
-  });
+    return searchable.includes(search.toLowerCase())
+      && (!categoryFilter || item.categoria?.trim() === categoryFilter)
+      && (!statusFilter || item.statusVenda === statusFilter);
+  }));
   
   
   return (
     <div className="card">
       <Toast ref={toast} />
-      <Toolbar className="p-mb-4" start={<h2 className="titulo">Gerenciamento de Produtos</h2>} end={<Button style={{ backgroundColor: '#000000', color: 'white' }} label="Adicionar Novo Produto" icon="pi pi-plus" severity="success" onClick={openNew} />} />
-      <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por produto, categoria ou status">
-        <Dropdown value={statusFilter} options={statusVendaOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
-      </ManagementFilters>
-
-      <DataTable value={produtosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum produto encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-        <Column field="nome" header="Nome" sortable></Column>
-        
-        <Column field="precoVenda" header="Preço" body={precoVendaBodyTemplate} sortable></Column>
-        <Column field="quantidade" header="Qtd." sortable></Column>
-        <Column field="statusVenda" header="Status" sortable></Column>
-        <Column field="categoria" header="Categoria" sortable></Column>
-        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
-      </DataTable>
-
-    <Dialog 
-        visible={produtoVendaDialog} 
-      style={{ width: '680px' }} 
-        header={isEditing ? "Editar Produto" : "Adicionar Produto"} 
-        modal 
-        className="p-fluid form-dialog product-dialog" 
-        footer={produtoVendaDialogFooter} 
-        onHide={hideDialog} 
-        closable={true} 
-        closeIcon="pi pi-times" 
-      >
-       
-        
-        <div className="product-form-grid">
-        <div className="product-form-section product-form-section-wide">
-          <span className="product-form-section-title">Informações do produto</span>
-        </div>
-        <div className="p-field product-form-section-wide">
-          <label htmlFor="nome">Nome *</label>
-          <InputText id="nome" value={produtoVenda.nome} onChange={(e) => onInputChange(e, 'nome')} placeholder="Ex.: Cabeçote Honda Civic" required autoFocus />
-        </div>
-        <div className="p-field product-form-section-wide">
-          <label htmlFor="descricao">Descrição</label>
-          <InputTextarea id="descricao" value={produtoVenda.descricao} onChange={(e) => onInputChange(e, 'descricao')} rows={3} placeholder="Descreva aplicação, estado ou compatibilidade." />
-        </div>
-        <div className="product-form-section product-form-section-wide">
-          <span className="product-form-section-title">Preço e disponibilidade</span>
-        </div>
-        <div className="p-field">
-          <label htmlFor="quantidade">Estoque *</label>
-          <InputNumber id="quantidade" value={produtoVenda.quantidade} onValueChange={(e) => onInputNumberChange(e, 'quantidade')} mode="decimal" min={0} />
-        </div>
-        <div className="p-field">
-          <label htmlFor="precoVenda">Preço de Venda *</label>
-          <InputNumber id="precoVenda" value={produtoVenda.precoVenda} onValueChange={(e) => onInputNumberChange(e, 'precoVenda')} mode="currency" currency="BRL" locale="pt-BR" min={0} />
-        </div>
-        <div className="p-field">
-          <label htmlFor="categoria">Categoria</label>
-          <InputText id="categoria" value={produtoVenda.categoria} onChange={(e) => onInputChange(e, 'categoria')} placeholder="Ex.: Cabeçotes" />
-        </div>
-        <div className="p-field">
-          <label htmlFor="statusVenda">Status *</label>
-          <Dropdown id="statusVenda" value={produtoVenda.statusVenda} options={statusVendaOptions} onChange={(e) => onDropdownChange(e, 'statusVenda')} placeholder="Selecione o status" />
-        </div>
-
-
-        
-        {isEditing && produtoVenda.nomeArquivoImagem && (
-          <div className="p-field product-form-section-wide product-image-preview">
-            <label>Imagem Atual</label>
-            <img 
-             
-              src={`${BACKEND_URL}/imagens/${produtoVenda.nomeArquivoImagem}`} 
-              alt={produtoVenda.nome} 
-              style={{ 
-                width: '150px', 
-                height: '150px', 
-                objectFit: 'cover',
-                display: 'block', 
-                margin: '10px auto', 
-                border: '1px solid #ddd', 
-                borderRadius: '4px' 
-              }}
-              
-              onError={(e) => { 
-                e.target.style.display = 'none'; 
-                console.error("Erro ao carregar imagem:", e.target.src);
-              }}
-            />
-          
-          </div>
-        )}
-        
-
-        <div className="p-field product-form-section-wide product-image-upload">
-          <label htmlFor="imagem">{isEditing ? "Substituir Imagem" : "Imagem"}</label>
-          <FileUpload 
-            ref={fileUploadRef}
-            name="imagem" 
-            chooseLabel="Selecionar Imagem"
-            uploadLabel="Enviar" 
-            cancelLabel="Limpar"
-            customUpload 
-            onSelect={onFileSelect} 
-            onClear={onFileClear}
-            auto 
-            accept="image/*" 
-            maxFileSize={1000000} 
-            emptyTemplate={<p style={{ textAlign: 'center' }}>Arraste ou selecione a imagem.</p>}
-          />
-          <small>A imagem só pode ser enviada ao clicar em "Salvar".</small>
-        </div>
-        </div>
-        
-      </Dialog>
-      
-      
-     
+      {!isFormRoute ? (
+        <>
+          <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Estoque e catálogo" title="Produtos à venda" description="Organize os produtos, preços e disponibilidade na vitrine." />} end={<Button label="Adicionar produto" icon="pi pi-plus" onClick={openNew} />} />
+          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por produto, categoria ou status" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
+            <Dropdown value={categoryFilter} options={categoryOptions} onChange={(event) => setCategoryFilter(event.value)} placeholder="Todas as categorias" showClear disabled={!categoryOptions.length} />
+            <Dropdown value={statusFilter} options={statusVendaOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
+          </ManagementFilters>
+          <DataTable value={produtosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum produto encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
+            <Column field="nome" header="Nome" sortable></Column>
+            <Column field="precoVenda" header="Preço" body={precoVendaBodyTemplate} sortable></Column>
+            <Column field="quantidade" header="Qtd." sortable></Column>
+            <Column field="statusVenda" header="Status" sortable></Column>
+            <Column field="categoria" header="Categoria" sortable></Column>
+            <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
+          </DataTable>
+        </>
+      ) : (
+        <AdminFormPanel
+          title={isEditing ? 'Editar produto' : 'Novo produto'}
+          description="Cadastre as informações, disponibilidade e imagem do produto."
+          submitLabel={isEditing ? 'Salvar alterações' : 'Cadastrar produto'}
+          onCancel={hideDialog}
+          onSubmit={saveProdutoVenda}
+        >
+          <AdminFormSection title="Informações do produto" description="Identifique o produto e descreva sua aplicação ou estado.">
+            <div className="admin-form-grid">
+              <div className="p-field admin-form-wide">
+                <label htmlFor="nome">Nome do produto *</label>
+                <InputText id="nome" value={produtoVenda.nome} onChange={(e) => onInputChange(e, 'nome')} placeholder="Ex.: Cabeçote Honda Civic" required autoFocus />
+              </div>
+              <div className="p-field admin-form-wide">
+                <label htmlFor="descricao">Descrição</label>
+                <InputTextarea id="descricao" value={produtoVenda.descricao} onChange={(e) => onInputChange(e, 'descricao')} rows={3} placeholder="Descreva aplicação, estado ou compatibilidade." />
+              </div>
+            </div>
+          </AdminFormSection>
+          <AdminFormSection title="Preço e disponibilidade" description="Defina estoque, preço de venda e situação do anúncio.">
+            <div className="admin-form-grid">
+              <div className="p-field">
+                <label htmlFor="quantidade">Estoque *</label>
+                <InputNumber id="quantidade" value={produtoVenda.quantidade} onValueChange={(e) => onInputNumberChange(e, 'quantidade')} mode="decimal" min={0} />
+              </div>
+              <div className="p-field">
+                <label htmlFor="precoVenda">Preço de venda *</label>
+                <InputNumber id="precoVenda" value={produtoVenda.precoVenda} onValueChange={(e) => onInputNumberChange(e, 'precoVenda')} mode="currency" currency="BRL" locale="pt-BR" min={0} />
+              </div>
+              <div className="p-field">
+                <label htmlFor="categoria">Categoria</label>
+                <InputText id="categoria" value={produtoVenda.categoria} onChange={(e) => onInputChange(e, 'categoria')} placeholder="Ex.: Cabeçotes" />
+              </div>
+              <div className="p-field">
+                <label htmlFor="statusVenda">Status *</label>
+                <Dropdown id="statusVenda" value={produtoVenda.statusVenda} options={statusVendaOptions} onChange={(e) => onDropdownChange(e, 'statusVenda')} placeholder="Selecione o status" />
+              </div>
+            </div>
+          </AdminFormSection>
+          <AdminFormSection title="Imagem do produto" description="Envie uma imagem de até 1 MB; ela será enviada ao salvar o formulário.">
+            <div className="admin-form-grid">
+              {isEditing && produtoVenda.nomeArquivoImagem && (
+                <div className="admin-form-field">
+                  <label>Imagem atual</label>
+                  <img
+                    src={`${BACKEND_URL}/imagens/${produtoVenda.nomeArquivoImagem}`}
+                    alt={produtoVenda.nome}
+                    className="product-current-image"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      console.error('Erro ao carregar imagem:', e.currentTarget.src);
+                    }}
+                  />
+                </div>
+              )}
+              <div className="admin-form-field admin-form-wide">
+                <label htmlFor="imagem">{isEditing ? 'Substituir imagem' : 'Imagem'}</label>
+                <FileUpload
+                  ref={fileUploadRef}
+                  name="imagem"
+                  chooseLabel="Selecionar imagem"
+                  uploadLabel="Enviar"
+                  cancelLabel="Limpar"
+                  customUpload
+                  onSelect={onFileSelect}
+                  onClear={onFileClear}
+                  auto
+                  accept="image/*"
+                  maxFileSize={1000000}
+                  emptyTemplate={<p className="admin-upload-empty">Arraste uma imagem para cá ou selecione um arquivo.</p>}
+                />
+              </div>
+            </div>
+          </AdminFormSection>
+        </AdminFormPanel>
+      )}
       <Dialog visible={deleteProdutoVendaDialog} style={{ width: '450px' }} header="Confirmação" modal footer={deleteProdutoVendaDialogFooter} onHide={hideDeleteProdutoVendaDialog} closable={true} closeIcon="pi pi-times">
         <div className="confirmation-content">
           <i className="pi pi-exclamation-triangle p-mr-3" style={{ fontSize: '2rem' }} />

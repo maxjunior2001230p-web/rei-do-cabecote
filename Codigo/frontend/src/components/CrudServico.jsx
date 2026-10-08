@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import './CrudUsuario.css'; 
 
@@ -9,7 +9,6 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { InputNumber } from 'primereact/inputnumber';
-import { Calendar } from 'primereact/calendar';
 import { Dropdown } from 'primereact/dropdown';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
@@ -17,10 +16,33 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { MultiSelect } from 'primereact/multiselect';
 import ManagementFilters from './ManagementFilters';
+import AdminPageHeading from './AdminPageHeading';
+import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
+import AdminEntityPicker from './AdminEntityPicker';
+import useAdminFormRoute from '../hooks/useAdminFormRoute';
+import useManagementSort from '../hooks/useManagementSort';
+
+const serviceSortOptions = [
+  { label: 'Descrição', field: 'descricao' },
+  { label: 'Tipo', field: 'tipo' },
+  { label: 'Status', field: 'status' },
+  { label: 'Cliente', field: 'cliente.nome' },
+  { label: 'Placa', field: 'veiculo.placa' },
+  { label: 'Data prevista', field: 'dataPrevista' },
+  { label: 'Mão de obra', field: 'maoDeObra' },
+  { label: 'Valor total', field: 'preco' },
+];
+
+const getGuaranteeMonths = (start, end) => {
+  if (!start || !end) return null;
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + endDate.getMonth() - startDate.getMonth();
+  return [1, 3, 6].includes(months) ? months : null;
+};
 
 const CrudServico = () => {
   const [servicos, setServicos] = useState([]);
-  const [servicoDialog, setServicoDialog] = useState(false);
   const [deleteServicoDialog, setDeleteServicoDialog] = useState(false);
   const [servico, setServico] = useState({
     id: null,
@@ -41,6 +63,7 @@ const CrudServico = () => {
   const [viewServicoDialog, setViewServicoDialog] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('dataPrevista', serviceSortOptions);
 
   const [pecas, setPecas] = useState([]);
   const [todosOsVeiculos, setTodosOsVeiculos] = useState([]);
@@ -48,8 +71,7 @@ const CrudServico = () => {
   const [clientes, setClientes] = useState([]);
 
   const toast = useRef(null);
-  
-  
+
   const emptyServico = { 
     id: null, 
     descricao: '', 
@@ -65,9 +87,6 @@ const CrudServico = () => {
     tipoPagamento: null,
     garantia: null
   };
-
-  const [showFooterButtons, setShowFooterButtons] = useState(true);
-  const dialogContentRef = useRef(null);
 
   
   const tipoPagamentoOptions = [
@@ -86,23 +105,47 @@ const CrudServico = () => {
   
   const [garantiaSelecionada, setGarantiaSelecionada] = useState(null);
 
-  
-  useEffect(() => {
-    if (!servicoDialog) return;
-    const content = dialogContentRef.current;
-    if (content) content.scrollTop = 0;
-    const handleScroll = () => {
-      const el = dialogContentRef.current;
-      if (!el) return;
-      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10;
-      setShowFooterButtons(atBottom);
+  const loadServico = useCallback(async (id) => {
+    const [servicosResponse, pecasResponse, veiculosResponse, clientesResponse] = await Promise.all([
+      api.get('/servicos'),
+      api.get('/pecas'),
+      api.get('/veiculos'),
+      api.get('/clientes'),
+    ]);
+    const source = servicosResponse.data.find((item) => String(item.id) === id);
+    if (!source) return null;
+    const loadedPecas = pecasResponse.data;
+    const loadedVeiculos = veiculosResponse.data;
+    const loadedClientes = clientesResponse.data;
+    setPecas(loadedPecas);
+    setTodosOsVeiculos(loadedVeiculos);
+    setClientes(loadedClientes);
+    const client = loadedClientes.find((item) => item.id === source.cliente?.id) || null;
+    const vehicleOptions = loadedVeiculos.filter((item) => item.cliente?.id === client?.id);
+    setVeiculosFiltrados(vehicleOptions);
+    setGarantiaSelecionada(getGuaranteeMonths(source.dataPrevista, source.garantia));
+    return {
+      ...source,
+      dataPrevista: source.dataPrevista ? new Date(source.dataPrevista) : null,
+      garantia: source.garantia ? new Date(source.garantia) : null,
+      cliente: client,
+      veiculo: loadedVeiculos.find((item) => item.id === source.veiculo?.id) || null,
+      pecas: (source.pecas || []).map((part) => loadedPecas.find((item) => item.id === (part.id || part))).filter(Boolean),
     };
-    const el = content;
-    if (el) el.addEventListener('scroll', handleScroll);
-    return () => {
-      if (el) el.removeEventListener('scroll', handleScroll);
-    };
-  }, [servicoDialog]);
+  }, []);
+  const onFormLoadError = useCallback((error) => {
+    console.error('Erro ao carregar serviço:', error);
+    toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível carregar o serviço.', life: 3000 });
+  }, []);
+  const { isFormRoute, openNew: openNewRoute, openEdit, closeForm, finishSave } = useAdminFormRoute({
+    basePath: '/servicos',
+    emptyValue: emptyServico,
+    setValue: setServico,
+    setIsEditing,
+    loadById: loadServico,
+    onLoadError: onFormLoadError,
+  });
+
 
   useEffect(() => {
     buscarServicos();
@@ -148,12 +191,12 @@ const CrudServico = () => {
   };
 
   const openNew = () => {
-    setServico(emptyServico);
-    setIsEditing(false);
-    setServicoDialog(true);
+    setGarantiaSelecionada(null);
+    setVeiculosFiltrados([]);
+    openNewRoute();
   };
 
-  const hideDialog = () => setServicoDialog(false);
+  const hideDialog = closeForm;
   const hideDeleteServicoDialog = () => setDeleteServicoDialog(false);
 
   const editServico = (servico) => {
@@ -188,9 +231,8 @@ const CrudServico = () => {
         _servico.pecas = [];
     }
 
-    setServico(_servico);
-    setIsEditing(true);
-    setServicoDialog(true);
+    setGarantiaSelecionada(getGuaranteeMonths(_servico.dataPrevista, _servico.garantia));
+    openEdit(_servico);
   };
 
   const confirmDeleteServico = (servico) => {
@@ -273,13 +315,16 @@ const CrudServico = () => {
       if (isEditing) {
         await api.put(`/servicos/${servico.id}`, dto);
         toast.current.show({ severity: 'success', summary: 'Sucesso', detail: 'Serviço atualizado', life: 3000 });
-        setServicoDialog(false);
+        finishSave();
         buscarServicos();
       } else {
         const response = await api.post('/servicos', dto);
         toast.current.show({ severity: 'success', summary: 'Sucesso', detail: 'Serviço criado', life: 3000 });
         
-        setServico({ ...servico, id: response.data.id });
+        const savedServico = { ...servico, id: response.data.id };
+        setServico(savedServico);
+        setIsEditing(true);
+        openEdit(savedServico);
         
         buscarServicos();
       }
@@ -559,8 +604,8 @@ const CrudServico = () => {
 
   const deleteServicoDialogFooter = (
     <>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Não" icon="pi pi-times" outlined onClick={hideDeleteServicoDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Sim" icon="pi pi-check" severity="danger" onClick={deleteServico} />
+      <Button label="Não" icon="pi pi-times" outlined onClick={hideDeleteServicoDialog} />
+      <Button label="Sim" icon="pi pi-check" severity="danger" onClick={deleteServico} />
     </>
   );
 
@@ -579,20 +624,170 @@ const CrudServico = () => {
     return <span className={`service-status-badge service-status-${statusClass}`}>{status}</span>;
   };
 
-  const servicosFiltrados = servicos.filter((servico) => {
-    const searchable = `${servico.descricao || ''} ${servico.tipo || ''} ${servico.status || ''}`.toLowerCase();
+  const servicosFiltrados = sortItems(servicos.filter((servico) => {
+    const searchable = `${servico.descricao || ''} ${servico.tipo || ''} ${servico.status || ''} ${servico.cliente?.nome || ''} ${servico.veiculo?.placa || ''}`.toLowerCase();
     return searchable.includes(search.toLowerCase()) && (!statusFilter || servico.status === statusFilter);
-  });
+  }));
 
   return (
     <div className="card">
       <Toast ref={toast} />
-      <Toolbar className="p-mb-4" start={<h2 className="titulo">Gerenciamento de Serviços</h2>} end={<Button style={{ backgroundColor: '#000000', color: 'white' }} label="Adicionar Novo Serviço" icon="pi pi-plus" severity="success" onClick={openNew} />} />
-      <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por descrição, tipo ou status">
-        <Dropdown value={statusFilter} options={statusOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
-      </ManagementFilters>
+      {isFormRoute ? (
+        <AdminFormPanel
+          title={isEditing ? 'Editar ordem de serviço' : 'Nova ordem de serviço'}
+          description="Organize os dados do cliente, a execução, os valores e as condições de pagamento."
+          submitLabel={isEditing ? 'Salvar alterações' : 'Cadastrar serviço'}
+          onCancel={hideDialog}
+          onSubmit={saveServico}
+          actions={
+            <>
+              <Button type="button" label="Cancelar" outlined onClick={hideDialog} />
+              <Button type="button" label="Gerar orçamento" icon="pi pi-file-pdf" className="service-budget-button" onClick={() => {
+                if (!servico.id) {
+                  toast.current.show({ severity: 'error', summary: 'Atenção', detail: 'Salve o serviço antes de gerar o orçamento!', life: 3500 });
+                  return;
+                }
+                gerarOrcamento();
+              }} />
+              <Button type="submit" label={isEditing ? 'Salvar alterações' : 'Salvar serviço'} icon="pi pi-check" />
+            </>
+          }
+        >
+          <AdminFormSection title="Identificação do atendimento" description="Defina o serviço e o cliente responsável pela ordem.">
+            <div className="admin-form-grid">
+              <div className="p-field">
+                <label htmlFor="tipo">Tipo de serviço *</label>
+                <Dropdown
+                  id="tipo"
+                  value={servico.tipo}
+                  options={['Retífica do cabeçote', 'Assento e guias de válvula', 'Substituição de peças', 'Montagem e testes', 'Serviços complementares']}
+                  onChange={(e) => onInputChange(e, 'tipo')}
+                  placeholder="Selecione o tipo"
+                  filter
+                  filterPlaceholder="Buscar tipo de serviço..."
+                  required
+                />
+              </div>
+              <div className="p-field">
+                <label htmlFor="status">Status</label>
+                <Dropdown id="status" value={servico.status} options={statusOptions} onChange={(e) => onInputChange(e, 'status')} placeholder="Selecione o status" required disabled={!isEditing} />
+              </div>
+              <div className="p-field admin-form-wide">
+                <label htmlFor="descricao">Descrição do serviço *</label>
+                <InputText id="descricao" value={servico.descricao} onChange={(e) => onInputChange(e, 'descricao')} placeholder="Ex.: Retífica completa do cabeçote" required autoFocus />
+              </div>
+              <div className="admin-form-wide">
+                <AdminEntityPicker
+                  label="Cliente *"
+                  title="Selecionar cliente"
+                  placeholder="Buscar e selecionar cliente"
+                  emptyMessage="Nenhum cliente corresponde à busca."
+                  options={clientes}
+                  value={servico.cliente}
+                  onChange={(value) => onInputChange({ value }, 'cliente')}
+                  getLabel={(item) => item.nome}
+                  getSearchText={(item) => `${item.nome} ${item.cpf || ''} ${item.telefone || ''} ${item.endereco || ''}`}
+                  getDetails={(item) => [item.cpf && `CPF ${item.cpf}`, item.telefone, item.endereco].filter(Boolean).join(' · ')}
+                />
+              </div>
+              <div className="admin-form-wide">
+                <AdminEntityPicker
+                  label="Veículo / placa *"
+                  title="Selecionar veículo"
+                  placeholder={servico.cliente ? 'Buscar e selecionar veículo' : 'Selecione o cliente primeiro'}
+                  emptyMessage={servico.cliente ? 'Este cliente ainda não tem veículos cadastrados.' : 'Selecione um cliente antes de escolher o veículo.'}
+                  options={veiculosFiltrados}
+                  value={servico.veiculo}
+                  onChange={(value) => onInputChange({ value }, 'veiculo')}
+                  getLabel={(item) => `${item.placa} · ${item.modelo}`}
+                  getSearchText={(item) => `${item.placa} ${item.modelo} ${item.montadora} ${item.cor || ''} ${item.ano_modelo || ''}`}
+                  getDetails={(item) => [item.montadora, item.ano_modelo, item.cor].filter(Boolean).join(' · ')}
+                  getSortValue={(item) => item.placa || ''}
+                />
+              </div>
+            </div>
+          </AdminFormSection>
+          <AdminFormSection title="Execução e valores" description="Informe prazo, peças utilizadas e valor de mão de obra.">
+            <div className="admin-form-grid">
+              <div className="p-field">
+                <label htmlFor="dataPrevista">Data prevista *</label>
+                <input
+                  id="dataPrevista"
+                  type="date"
+                  value={servico.dataPrevista ? new Date(servico.dataPrevista).toISOString().slice(0, 10) : ''}
+                  onChange={(event) => onInputChange(event, 'dataPrevista')}
+                  required
+                />
+              </div>
+              <div className="p-field">
+                <label htmlFor="maoDeObra">Mão de obra</label>
+                <InputNumber id="maoDeObra" value={servico.maoDeObra} onValueChange={(e) => onInputChange(e, 'maoDeObra')} mode="currency" currency="BRL" locale="pt-BR" minFractionDigits={2} placeholder="R$ 0,00" />
+              </div>
+              <div className="p-field admin-form-wide">
+                <label htmlFor="pecas">Peças do serviço *</label>
+                <MultiSelect
+                  id="pecas"
+                  value={servico.pecas}
+                  options={pecas}
+                  optionLabel="nome"
+                  onChange={(e) => onInputChange(e, 'pecas')}
+                  placeholder="Selecione uma ou mais peças"
+                  display="comma"
+                  filter
+                  filterBy="nome"
+                  filterPlaceholder="Buscar peça por nome..."
+                  emptyMessage="Nenhuma peça cadastrada para selecionar."
+                  emptyFilterMessage="Nenhuma peça encontrada com esse nome."
+                  panelClassName="service-parts-panel"
+                  showSelectAll={false}
+                  maxSelectedLabels={1}
+                  selectedItemsLabel="{0} peças selecionadas"
+                  required
+                />
+              </div>
+              <div className="p-field">
+                <label htmlFor="preco">Valor total</label>
+                <InputNumber id="preco" value={servico.preco} mode="currency" currency="BRL" disabled />
+              </div>
+            </div>
+          </AdminFormSection>
+          <AdminFormSection title="Pagamento e garantia" description="Registre como será pago e as condições de garantia.">
+            <div className="admin-form-grid">
+              <div className="p-field">
+                <label htmlFor="tipoPagamento">Tipo de pagamento *</label>
+                <Dropdown id="tipoPagamento" value={servico.tipoPagamento} options={tipoPagamentoOptions} onChange={(e) => onInputChange(e, 'tipoPagamento')} placeholder="Selecione o pagamento" required />
+              </div>
+              <div className="p-field">
+                <label htmlFor="garantiaSelecionada">Período de garantia *</label>
+                <Dropdown id="garantiaSelecionada" value={garantiaSelecionada} options={garantiaOptions} onChange={(e) => onInputChange(e, 'garantiaSelecionada')} placeholder="Selecione o período" required />
+              </div>
+              {isEditing && servico.status === 'Concluído' && (
+                <div className="p-field">
+                  <label htmlFor="garantia">Data de garantia *</label>
+                  <input
+                    id="garantia"
+                    type="date"
+                    value={servico.garantia ? new Date(servico.garantia).toISOString().slice(0, 10) : ''}
+                    onChange={(event) => onInputChange(event, 'garantia')}
+                    required
+                  />
+                </div>
+              )}
+              <div className="p-field admin-form-wide">
+                <label htmlFor="observacoes">Observações</label>
+                <InputTextarea id="observacoes" value={servico.observacoes} onChange={(e) => onInputChange(e, 'observacoes')} placeholder="Registre informações importantes sobre o atendimento" rows={4} autoResize />
+              </div>
+            </div>
+          </AdminFormSection>
+        </AdminFormPanel>
+      ) : (
+        <>
+          <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Operação da oficina" title="Serviços" description="Acompanhe ordens de serviço, prazos e valores." />} end={<Button label="Adicionar serviço" icon="pi pi-plus" onClick={openNew} />} />
+          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por descrição, cliente, placa ou status" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions}>
+            <Dropdown value={statusFilter} options={statusOptions} onChange={(event) => setStatusFilter(event.value)} placeholder="Todos os status" showClear />
+          </ManagementFilters>
 
-      <DataTable className="service-table" value={servicosFiltrados} responsiveLayout="stack" breakpoint="768px" emptyMessage="Nenhum serviço encontrado com esses filtros." tableStyle={{ minWidth: '0' }} paginator rows={10}>
+          <DataTable className="service-table" value={servicosFiltrados} responsiveLayout="stack" breakpoint="768px" emptyMessage="Nenhum serviço encontrado com esses filtros." tableStyle={{ minWidth: '0' }} paginator rows={10}>
        <Column
   header="ID"
   sortable
@@ -610,251 +805,9 @@ const CrudServico = () => {
         <Column field="dataPrevista" header="Data prevista" sortable style={{ width: '11%' }} body={(data) => new Date(data.dataPrevista).toLocaleDateString("pt-BR", { timeZone: 'UTC' })}></Column>
         <Column body={actionBodyTemplate} style={{ width: '15%' }}></Column>
         <Column field="status" header="Status" body={statusBodyTemplate} sortable style={{ width: '14%' }}></Column>
-      </DataTable>
-
-      {/* Dialog Adicionar/Editar */}
-      <Dialog visible={servicoDialog} style={{ width: '900px' }} header={isEditing ? "Editar Serviço" : "Adicionar Serviço"} modal className="p-fluid form-dialog service-dialog" onHide={hideDialog} closable closeIcon="pi pi-times">
-        <div ref={dialogContentRef} className="service-form-content">
-          <div className="service-form-intro">
-            <span className="service-form-kicker">Ordem de serviço</span>
-            <strong>{isEditing ? 'Atualize os dados do atendimento' : 'Registre um novo atendimento'}</strong>
-            <small>Organize cliente, execução, valores e condições em um único fluxo.</small>
-          </div>
-          <div className="service-form-section-title">Identificação do atendimento</div>
-          <div className="p-field">
-            <label htmlFor="tipo">Tipo de Despesas</label>
-            <Dropdown
-              style={{ padding: '8px' }}
-              id="tipo"
-              value={servico.tipo}
-              options={[ 
-                'Retífica do cabeçote',
-                'Assento e guias de válvula',
-                'Substituição de peças',
-                'Montagem e testes',
-                'Serviços complementares'
-              ]}
-              onChange={(e) => onInputChange(e, 'tipo')}
-              placeholder="Selecione"
-              filter
-              filterPlaceholder="Buscar tipo de despesa..."
-              panelClassName="service-option-panel"
-              scrollHeight="240px"
-              required
-            />
-          </div>
-           <div className="p-field">
-            <label htmlFor="status">Status</label>
-            <Dropdown
-  style={{ padding: '8px' }}
-  id="status"
-  value={servico.status}
-  options={statusOptions}
-  onChange={(e) => onInputChange(e, 'status')}
-  placeholder="Selecione o status"
-  required
-  disabled={!isEditing} 
-  panelClassName="service-option-panel"
-  scrollHeight="180px"
-/>
-
-            
-          </div>
-          <div className="p-field">
-            <label htmlFor="descricao">Descrição do Serviço</label>
-            <InputText style={{ padding: '8px' }} id="descricao" value={servico.descricao} onChange={(e) => onInputChange(e, 'descricao')} placeholder="Ex.: Retífica completa do cabeçote" required autoFocus />
-          </div>
-
-          <div className="service-form-section-title">Execução e peças</div>
-          <div className="p-field">
-            <label htmlFor="maoDeObra">Mão de Obra</label>
-            <InputNumber
-  value={servico.maoDeObra}
-  onValueChange={(e) => onInputChange(e, 'maoDeObra')}
-  mode="currency"
-  currency="BRL"
-  locale="pt-BR"
-  minFractionDigits={2}
-  placeholder="R$ 0,00"
-  inputStyle={{ height: '38px', padding: '8px 12px', lineHeight: '1.2' }}
-/>
-          </div>
-          <div className="p-field">
-            <label htmlFor="dataPrevista">Data Prevista</label>
-            <Calendar className="service-calendar-input" id="dataPrevista" value={servico.dataPrevista} onChange={(e) => onInputChange(e, 'dataPrevista')} dateFormat="dd/mm/yy" locale="pt-BR" showIcon hideOnDateTimeSelect panelClassName="service-calendar-panel" required />
-          </div>
-          <div className="p-field">
-            <label htmlFor="pecas">Peças do serviço</label>
-            <MultiSelect
-              className="service-parts-select"
-              id="pecas"
-              value={servico.pecas}
-              options={pecas}
-              optionLabel="nome"
-              onChange={(e) => onInputChange(e, 'pecas')}
-              placeholder="Selecione uma ou mais peças"
-              display="comma"
-              selectedItemsLabel="{0} peças selecionadas"
-              filter
-              filterBy="nome"
-              filterPlaceholder="Buscar peça..."
-              emptyFilterMessage="Nenhuma peça encontrada"
-              emptyMessage="Nenhuma peça disponível"
-              panelClassName="service-parts-panel"
-              selectAllLabel="Selecionar todos"
-              closeIcon="pi pi-times"
-              closeButton={{ 'aria-label': 'Fechar lista de peças', title: 'Fechar lista de peças' }}
-              scrollHeight="240px"
-              required
-            />
-          </div>
-          <div className="p-field">
-            <label htmlFor="cliente">Cliente</label>
-            <Dropdown
-              id="cliente" 
-              value={servico.cliente} 
-              options={clientes} 
-              optionLabel="nome" 
-              onChange={(e) => onInputChange(e, 'cliente')}
-              placeholder="Selecione" 
-              required 
-              filter
-              showClear
-              panelClassName="service-client-panel"
-              scrollHeight="240px"
-            />
-          </div>
-
-          <div className="p-field">
-            <label htmlFor="veiculo">Placa do Veículo</label>
-            <Dropdown 
-              style={{ padding: '8px' }} 
-              id="veiculo" 
-              value={servico.veiculo} 
-              options={veiculosFiltrados}
-              optionLabel="placa" 
-              onChange={(e) => onInputChange(e, 'veiculo')}
-              placeholder="Selecione um cliente primeiro" 
-              required 
-              disabled={!servico.cliente}
-              panelClassName="service-option-panel"
-              scrollHeight="240px"
-            />
-          </div>
-
-          <div className="p-field">
-            <label htmlFor="preco">Valor Total</label>
-            <InputNumber
-  style={{ width: '100%' }}
-  inputStyle={{ height: '38px', padding: '8px 12px', lineHeight: '1.2' }}
-  id="preco"
-  value={servico.preco}
-  mode="currency"
-  currency="BRL"
-  disabled
-/>
-          </div>
-
-
-          <div className="service-form-section-title">Pagamento e garantia</div>
-
-          <div className="p-field">
-            <label htmlFor="tipoPagamento">Tipo de Pagamento</label>
-            <Dropdown
-              style={{ padding: '8px' }}
-              id="tipoPagamento"
-              value={servico.tipoPagamento}
-              options={tipoPagamentoOptions}
-              onChange={(e) => onInputChange(e, 'tipoPagamento')}
-              placeholder="Selecione"
-              panelClassName="service-option-panel"
-              scrollHeight="180px"
-              required
-            />
-          </div>
-
-         {isEditing && servico.status === 'Concluído' && (
-            <div className="p-field">
-              <label htmlFor="garantia">Data de Garantia</label>
-              <Calendar 
-                className="service-calendar-input"
-                id="garantia" 
-                value={servico.garantia} 
-                onChange={(e) => onInputChange(e, 'garantia')} 
-                dateFormat="dd/mm/yy" 
-                locale="pt-BR"
-                showIcon 
-                hideOnDateTimeSelect
-                panelClassName="service-calendar-panel"
-                required={servico.status === 'Concluído'} 
-              />
-            </div>
-          )}
-
-          <div className="p-field">
-            <label htmlFor="garantiaSelecionada">Garantia</label>
-            <Dropdown
-              style={{ padding: '8px' }}
-              id="garantiaSelecionada"
-              value={garantiaSelecionada}
-              options={garantiaOptions}
-              onChange={(e) => onInputChange(e, 'garantiaSelecionada')}
-              placeholder="Selecione o período de garantia"
-              panelClassName="service-option-panel"
-              scrollHeight="180px"
-              required
-            />
-          </div>
-
-          <div className="p-field">
-            <label htmlFor="observacoes">Observações</label>
-            <InputTextarea id="observacoes" value={servico.observacoes} onChange={(e) => onInputChange(e, 'observacoes')} placeholder="Registre informações importantes sobre o atendimento" rows={4} autoResize />
-          </div>
-          {showFooterButtons && (
-            <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-              <Button style={{ backgroundColor: '#000000', color: 'white', fontSize: '0.95rem', padding: '6px 12px', minWidth: '90px' }} label="Cancelar" icon="pi pi-times" outlined onClick={hideDialog} size="small" />
-              <Button style={{ backgroundColor: '#000000', color: 'white', fontSize: '0.95rem', padding: '6px 12px', minWidth: '90px' }} label="Salvar" icon="pi pi-check" onClick={saveServico} size="small" />
-              <span
-                style={{ display: 'inline-block' }}
-                onClick={() => {
-                  if (!servico.id) {
-                    toast.current.show({ severity: 'error', summary: 'Atenção', detail: 'Salve o serviço antes de gerar o orçamento!', life: 3500 });
-                  }
-                }}
-              >
-                <Button
-  style={{
-    backgroundColor: '#218c74',
-    color: 'white',
-    fontSize: '0.95rem',
-    padding: '6px 8px',
-    minWidth: '120px',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  }}
-  label="Orçamento"
-  icon="pi pi-file-pdf"
-  onClick={() => {
-    if (!servico.id) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Atenção',
-        detail: 'Salve o serviço antes de gerar o orçamento!',
-        life: 3500
-      });
-      return;
-    }
-    gerarOrcamento();
-  }}
-  tooltip={!servico.id ? 'Salve o serviço antes de gerar o orçamento' : ''}
-  size="small"
-/>
-              </span>
-            </div>
-          )}
-        </div>
-      </Dialog>
+          </DataTable>
+        </>
+      )}
 
       <Dialog visible={viewServicoDialog} style={{ width: '620px' }} header="Detalhes do serviço" modal className="p-fluid service-view-dialog" onHide={() => setViewServicoDialog(false)} closable closeIcon="pi pi-times" footer={(
         <div className="service-view-actions">

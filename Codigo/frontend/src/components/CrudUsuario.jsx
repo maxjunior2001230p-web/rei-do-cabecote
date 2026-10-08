@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 // O useNavigate não é mais necessário aqui para o botão "Voltar"
 import api from '../services/api';
 import './CrudUsuario.css';
@@ -12,15 +12,41 @@ import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
 import ManagementFilters from './ManagementFilters';
+import AdminPageHeading from './AdminPageHeading';
+import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
+import useAdminFormRoute from '../hooks/useAdminFormRoute';
+import useManagementSort from '../hooks/useManagementSort';
+
+const userSortOptions = [
+  { label: 'Nome', field: 'nome' },
+  { label: 'E-mail', field: 'email' },
+  { label: 'Cargo', field: 'cargo' },
+];
 
 const CrudUsuario = () => {
   const [usuarios, setUsuarios] = useState([]);
-  const [usuarioDialog, setUsuarioDialog] = useState(false);
   const [deleteUsuarioDialog, setDeleteUsuarioDialog] = useState(false);
   const [usuario, setUsuario] = useState({ id: null, nome: '', email: '', senha: '', cargo: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState('');
+  const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', userSortOptions);
   const toast = useRef(null);
+  const loadUsuario = useCallback(async (id) => {
+    const response = await api.get('/usuarios');
+    return response.data.find((item) => String(item.id) === id);
+  }, []);
+  const onFormLoadError = useCallback((error) => {
+    console.error('Erro ao carregar usuário:', error);
+    toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível carregar o usuário.', life: 3000 });
+  }, []);
+  const { isFormRoute, openNew: openNewRoute, openEdit, closeForm, finishSave } = useAdminFormRoute({
+    basePath: '/usuarios',
+    emptyValue: { id: null, nome: '', email: '', senha: '', cargo: '' },
+    setValue: setUsuario,
+    setIsEditing,
+    loadById: loadUsuario,
+    onLoadError: onFormLoadError,
+  });
   
   const cargos = [
     { label: 'Administrador', value: 'Administrador' },
@@ -40,25 +66,15 @@ const CrudUsuario = () => {
     }
   };
 
-  const openNew = () => {
-    setUsuario({ id: null, nome: '', email: '', senha: '', cargo: '' });
-    setIsEditing(false);
-    setUsuarioDialog(true);
-  };
+  const openNew = openNewRoute;
 
-  const hideDialog = () => {
-    setUsuarioDialog(false);
-  };
+  const hideDialog = closeForm;
 
   const hideDeleteUsuarioDialog = () => {
     setDeleteUsuarioDialog(false);
   };
 
-  const editUsuario = (usuario) => {
-    setUsuario({ ...usuario, senha: '' });
-    setIsEditing(true);
-    setUsuarioDialog(true);
-  };
+  const editUsuario = (usuario) => openEdit({ ...usuario, senha: '' });
 
   const confirmDeleteUsuario = (usuario) => {
     setUsuario(usuario);
@@ -89,25 +105,23 @@ const CrudUsuario = () => {
       return;
     }
 
-    let _usuario = { ...usuario };
+    const _usuario = { ...usuario };
 
-    if (isEditing) {
-      try {
+    try {
+      if (isEditing) {
         await api.put(`/usuarios/${_usuario.id}`, _usuario);
         toast.current.show({ severity: 'success', summary: 'Sucesso', detail: 'Usuário Atualizado', life: 3000 });
-      } catch {
-        toast.current.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível atualizar o usuário', life: 3000 });
-      }
-    } else {
-      try {
+      } else {
         await api.post('/usuarios', _usuario);
         toast.current.show({ severity: 'success', summary: 'Sucesso', detail: 'Usuário Criado', life: 3000 });
-      } catch {
-        toast.current.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível criar o usuário', life: 3000 });
       }
+      finishSave();
+      buscarUsuario();
+    } catch (error) {
+      const detail = isEditing ? 'Não foi possível atualizar o usuário' : 'Não foi possível criar o usuário';
+      toast.current.show({ severity: 'error', summary: 'Erro', detail, life: 3000 });
+      console.error('Erro ao salvar usuário:', error);
     }
-    setUsuarioDialog(false);
-    buscarUsuario();
   };
 
   const deleteUsuario = async () => {
@@ -121,64 +135,74 @@ const CrudUsuario = () => {
     }
   };
 
-  const usuarioDialogFooter = (
-    <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Cancelar" icon="pi pi-times" outlined onClick={hideDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Salvar" icon="pi pi-check" onClick={saveUsuario} />
-    </React.Fragment>
-  );
-
   const deleteUsuarioDialogFooter = (
     <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Não" icon="pi pi-times" outlined onClick={hideDeleteUsuarioDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Sim" icon="pi pi-check" severity="danger" onClick={deleteUsuario} />
+      <Button label="Não" icon="pi pi-times" outlined onClick={hideDeleteUsuarioDialog} />
+      <Button label="Sim" icon="pi pi-check" severity="danger" onClick={deleteUsuario} />
     </React.Fragment>
   );
 
   const actionBodyTemplate = (rowData) => {
     return (
       <React.Fragment>
-        <Button style={{ backgroundColor: '#000000', color: 'white' }} icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editUsuario(rowData)} />
-        <Button style={{ backgroundColor: '#000000', color: 'red' }} icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteUsuario(rowData)} />
+        <Button icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editUsuario(rowData)} />
+        <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteUsuario(rowData)} />
       </React.Fragment>
     );
   };
 
-  const usuariosFiltrados = usuarios.filter((item) => `${item.nome} ${item.email} ${item.cargo}`.toLowerCase().includes(search.toLowerCase()));
+  const usuariosFiltrados = sortItems(usuarios.filter((item) => `${item.nome} ${item.email} ${item.cargo}`.toLowerCase().includes(search.toLowerCase())));
 
   return (
     <div className="card">
       <Toast ref={toast} />
       {/* A barra de ferramentas agora só tem o título e o botão de adicionar */}
-      <Toolbar className="p-mb-4" start={<h2 className="titulo">Gerenciamento de Usuários</h2>} end={<Button style={{ backgroundColor: '#000000', color: 'white' }} label="Adicionar Novo Usuário" icon="pi pi-plus" severity="success" onClick={openNew} />} />
-      <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por nome, email ou cargo" />
+      {!isFormRoute ? (
+        <>
+          <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Acesso e equipe" title="Usuários" description="Controle os acessos administrativos da oficina." />} end={<Button label="Adicionar usuário" icon="pi pi-plus" onClick={openNew} />} />
+          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por nome, email ou cargo" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions} />
+          <DataTable value={usuariosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum usuário encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
+            <Column field="nome" header="Nome" sortable></Column>
+            <Column field="email" header="Email" sortable></Column>
+            <Column field="cargo" header="Cargo" sortable></Column>
+            <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
+          </DataTable>
+        </>
+      ) : (
+        <AdminFormPanel
+          title={isEditing ? 'Editar usuário' : 'Novo usuário'}
+          description="Defina a identificação, as credenciais e o nível de acesso à administração."
+          submitLabel={isEditing ? 'Salvar alterações' : 'Cadastrar usuário'}
+          onCancel={hideDialog}
+          onSubmit={saveUsuario}
+        >
+          <AdminFormSection title="Dados do usuário" description="Estas informações identificam a pessoa na equipe da oficina.">
+            <div className="admin-form-grid">
+              <div className="p-field">
+                <label htmlFor="nome">Nome completo *</label>
+                <InputText id="nome" value={usuario.nome} onChange={(e) => onInputChange(e, 'nome')} required autoFocus placeholder="Nome do usuário" />
+              </div>
+              <div className="p-field">
+                <label htmlFor="email">E-mail *</label>
+                <InputText id="email" type="email" value={usuario.email} onChange={(e) => onInputChange(e, 'email')} required placeholder="nome@empresa.com" />
+              </div>
+            </div>
+          </AdminFormSection>
+          <AdminFormSection title="Acesso ao sistema" description="Ao editar, deixe a senha vazia para manter a senha atual.">
+            <div className="admin-form-grid">
+              <div className="p-field">
+                <label htmlFor="senha">{isEditing ? 'Nova senha' : 'Senha *'}</label>
+                <InputText id="senha" value={usuario.senha} onChange={(e) => onInputChange(e, 'senha')} type="password" required={!isEditing} placeholder={isEditing ? 'Deixe em branco para não alterar' : 'Mínimo de 6 caracteres'} />
+              </div>
+              <div className="p-field">
+                <label htmlFor="cargo">Perfil de acesso *</label>
+                <Dropdown id="cargo" value={usuario.cargo} options={cargos} onChange={(e) => onInputChange(e, 'cargo')} placeholder="Selecione o perfil" required />
+              </div>
+            </div>
+          </AdminFormSection>
+        </AdminFormPanel>
+      )}
 
-      <DataTable value={usuariosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum usuário encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-        <Column field="nome" header="Nome" sortable></Column>
-        <Column field="email" header="Email" sortable></Column>
-        <Column field="cargo" header="Cargo" sortable></Column>
-        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
-      </DataTable>
-
-      {/* Pop-ups permanecem os mesmos */}
-      <Dialog visible={usuarioDialog} style={{ width: '450px' }} header={isEditing ? "Editar Usuário" : "Adicionar Usuário"} modal className="p-fluid form-dialog" footer={usuarioDialogFooter} onHide={hideDialog} closable closeIcon="pi pi-times">
-        <div className="p-field">
-          <label htmlFor="nome">Nome</label>
-          <InputText style={{padding: '8px'}} id="nome" value={usuario.nome} onChange={(e) => onInputChange(e, 'nome')} required autoFocus />
-        </div>
-        <div className="p-field">
-          <label htmlFor="email">Email</label>
-          <InputText style={{padding: '8px'}} id="email" value={usuario.email} onChange={(e) => onInputChange(e, 'email')} required />
-        </div>
-        <div className="p-field">
-          <label htmlFor="senha">Senha</label>
-          <InputText style={{padding: '8px'}} id="senha" value={usuario.senha} onChange={(e) => onInputChange(e, 'senha')} type="password" required={!isEditing} placeholder={isEditing ? "Deixe em branco para não alterar" : ""} />
-        </div>
-        <div className="p-field">
-          <label htmlFor="cargo">Cargo</label>
-          <Dropdown id="cargo" value={usuario.cargo} options={cargos} onChange={(e) => onInputChange(e, 'cargo')} placeholder="Selecione o Cargo" required inputStyle={{padding: '8px'}} />
-        </div>
-      </Dialog>
       <Dialog visible={deleteUsuarioDialog} style={{ width: '450px' }} header="Confirmação" modal footer={deleteUsuarioDialogFooter} onHide={hideDeleteUsuarioDialog} closable={true} closeIcon="pi pi-times">
         <div className="confirmation-content">
           <i className="pi pi-exclamation-triangle p-mr-3" style={{ fontSize: '2rem' }} />

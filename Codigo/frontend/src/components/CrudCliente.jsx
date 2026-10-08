@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import './CrudUsuario.css'; 
 
@@ -10,18 +10,46 @@ import { InputText } from 'primereact/inputtext';
 import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import ManagementFilters from './ManagementFilters';
+import AdminPageHeading from './AdminPageHeading';
+import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
+import useAdminFormRoute from '../hooks/useAdminFormRoute';
+import useManagementSort from '../hooks/useManagementSort';
+
+const clientSortOptions = [
+  { label: 'Nome', field: 'nome' },
+  { label: 'CPF', field: 'cpf' },
+  { label: 'Telefone', field: 'telefone' },
+  { label: 'Endereço', field: 'endereco' },
+];
 // InputMask pode ser uma boa alternativa para CPF e Telefone, mas seguindo o template, usaremos InputText com validação.
 
 const CrudCliente = () => {
   const [clientes, setClientes] = useState([]);
-  const [clienteDialog, setClienteDialog] = useState(false);
   const [deleteClienteDialog, setDeleteClienteDialog] = useState(false);
   const [cliente, setCliente] = useState({ id: null, nome: '', cpf: '', endereco: '', telefone: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState('');
   const toast = useRef(null);
+  const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('nome', clientSortOptions);
   
   const emptyCliente = { id: null, nome: '', cpf: '', endereco: '', telefone: '' };
+
+  const loadCliente = useCallback(async (id) => {
+    const response = await api.get('/clientes');
+    return response.data.find((item) => String(item.id) === id);
+  }, []);
+  const onFormLoadError = useCallback((error) => {
+    console.error('Erro ao carregar cliente:', error);
+    toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível carregar o cliente.', life: 3000 });
+  }, []);
+  const { isFormRoute, openNew, openEdit, closeForm, finishSave } = useAdminFormRoute({
+    basePath: '/clientes',
+    emptyValue: emptyCliente,
+    setValue: setCliente,
+    setIsEditing,
+    loadById: loadCliente,
+    onLoadError: onFormLoadError,
+  });
 
   useEffect(() => {
     buscarClientes();
@@ -37,25 +65,13 @@ const CrudCliente = () => {
     }
   };
 
-  const openNew = () => {
-    setCliente(emptyCliente);
-    setIsEditing(false);
-    setClienteDialog(true);
-  };
-
-  const hideDialog = () => {
-    setClienteDialog(false);
-  };
+  const hideDialog = closeForm;
 
   const hideDeleteClienteDialog = () => {
     setDeleteClienteDialog(false);
   };
 
-  const editCliente = (cliente) => {
-    setCliente({ ...cliente }); // Carrega o cliente para edição
-    setIsEditing(true);
-    setClienteDialog(true);
-  };
+  const editCliente = openEdit;
 
   const confirmDeleteCliente = (cliente) => {
     setCliente(cliente);
@@ -102,7 +118,7 @@ const CrudCliente = () => {
         await api.post('/clientes', _cliente);
         toast.current.show({ severity: 'success', summary: 'Sucesso', detail: 'Cliente Criado', life: 3000 });
       }
-      setClienteDialog(false);
+      finishSave();
       buscarClientes();
     } catch (error) {
        const errorMsg = isEditing ? 'Não foi possível atualizar o cliente' : 'Não foi possível criar o cliente';
@@ -123,65 +139,71 @@ const CrudCliente = () => {
     }
   };
 
-  const clienteDialogFooter = (
-    <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Cancelar" icon="pi pi-times" outlined onClick={hideDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Salvar" icon="pi pi-check" onClick={saveCliente} />
-    </React.Fragment>
-  );
-
   const deleteClienteDialogFooter = (
     <React.Fragment>
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Não" icon="pi pi-times" outlined onClick={hideDeleteClienteDialog} />
-      <Button style={{ backgroundColor: '#000000', color: 'white' }} label="Sim" icon="pi pi-check" severity="danger" onClick={deleteCliente} />
+      <Button label="Não" icon="pi pi-times" outlined onClick={hideDeleteClienteDialog} />
+      <Button label="Sim" icon="pi pi-check" severity="danger" onClick={deleteCliente} />
     </React.Fragment>
   );
 
   const actionBodyTemplate = (rowData) => {
     return (
       <React.Fragment>
-        <Button style={{ backgroundColor: '#000000', color: 'white' }} icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editCliente(rowData)} />
-        <Button style={{ backgroundColor: '#000000', color: 'red' }} icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteCliente(rowData)} />
+        <Button icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editCliente(rowData)} />
+        <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteCliente(rowData)} />
       </React.Fragment>
     );
   };
 
-  const clientesFiltrados = clientes.filter((item) => `${item.nome} ${item.cpf} ${item.telefone} ${item.endereco}`.toLowerCase().includes(search.toLowerCase()));
+  const clientesFiltrados = sortItems(clientes.filter((item) => `${item.nome} ${item.cpf} ${item.telefone} ${item.endereco}`.toLowerCase().includes(search.toLowerCase())));
 
   return (
     <div className="card">
       <Toast ref={toast} />
-      <Toolbar className="p-mb-4" start={<h2 className="titulo">Gerenciamento de Clientes</h2>} end={<Button style={{ backgroundColor: '#000000', color: 'white' }} label="Adicionar Novo Cliente" icon="pi pi-plus" severity="success" onClick={openNew} />} />
-      <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por nome, CPF, telefone ou endereço" />
+      {!isFormRoute ? (
+        <>
+          <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Relacionamento" title="Clientes" description="Consulte e mantenha atualizados os clientes da oficina." />} end={<Button label="Adicionar cliente" icon="pi pi-plus" onClick={openNew} />} />
+          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por nome, CPF, telefone ou endereço" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions} />
 
-      <DataTable value={clientesFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum cliente encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-        <Column field="nome" header="Nome" sortable></Column>
-        <Column field="cpf" header="CPF" sortable></Column>
-        <Column field="telefone" header="Telefone" sortable></Column>
-        <Column field="endereco" header="Endereço" sortable></Column>
-        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
-      </DataTable>
+          <DataTable value={clientesFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum cliente encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
+            <Column field="nome" header="Nome" sortable></Column>
+            <Column field="cpf" header="CPF" sortable></Column>
+            <Column field="telefone" header="Telefone" sortable></Column>
+            <Column field="endereco" header="Endereço" sortable></Column>
+            <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
+          </DataTable>
+        </>
+      ) : (
+        <AdminFormPanel
+          title={isEditing ? 'Editar cliente' : 'Novo cliente'}
+          description="Cadastre os dados de contato e identificação do cliente."
+          submitLabel={isEditing ? 'Salvar alterações' : 'Cadastrar cliente'}
+          onCancel={hideDialog}
+          onSubmit={saveCliente}
+        >
+          <AdminFormSection title="Identificação e contato" description="Informe os dados usados para localizar e atender o cliente.">
+            <div className="admin-form-grid">
+              <div className="p-field admin-form-wide">
+                <label htmlFor="nome">Nome completo *</label>
+                <InputText id="nome" value={cliente.nome} onChange={(e) => onInputChange(e, 'nome')} required autoFocus placeholder="Ex.: João da Silva" />
+              </div>
+              <div className="p-field">
+                <label htmlFor="cpf">CPF *</label>
+                <InputText id="cpf" value={cliente.cpf} onChange={(e) => onInputChange(e, 'cpf')} required placeholder="Apenas números (11 dígitos)" />
+              </div>
+              <div className="p-field">
+                <label htmlFor="telefone">Telefone *</label>
+                <InputText id="telefone" value={cliente.telefone} onChange={(e) => onInputChange(e, 'telefone')} required placeholder="(31) 99999-8888" />
+              </div>
+              <div className="p-field admin-form-wide">
+                <label htmlFor="endereco">Endereço *</label>
+                <InputText id="endereco" value={cliente.endereco} onChange={(e) => onInputChange(e, 'endereco')} required placeholder="Rua, número, bairro e cidade" />
+              </div>
+            </div>
+          </AdminFormSection>
+        </AdminFormPanel>
+      )}
 
-      {/* Dialog para Adicionar/Editar Cliente */}
-      <Dialog visible={clienteDialog} style={{ width: '450px' }} header={isEditing ? "Editar Cliente" : "Adicionar Cliente"} modal className="p-fluid form-dialog" footer={clienteDialogFooter} onHide={hideDialog} closable closeIcon="pi pi-times">
-        <div className="p-field">
-          <label htmlFor="nome">Nome</label>
-          <InputText style={{padding: '8px'}} id="nome" value={cliente.nome} onChange={(e) => onInputChange(e, 'nome')} required autoFocus />
-        </div>
-        <div className="p-field">
-          <label htmlFor="cpf">CPF</label>
-          <InputText style={{padding: '8px'}} id="cpf" value={cliente.cpf} onChange={(e) => onInputChange(e, 'cpf')} required placeholder="Apenas números (11 dígitos)" />
-        </div>
-         <div className="p-field">
-          <label htmlFor="telefone">Telefone</label>
-          <InputText style={{padding: '8px'}} id="telefone" value={cliente.telefone} onChange={(e) => onInputChange(e, 'telefone')} required placeholder="(31)99999-8888" />
-        </div>
-        <div className="p-field">
-          <label htmlFor="endereco">Endereço</label>
-          <InputText style={{padding: '8px'}} id="endereco" value={cliente.endereco} onChange={(e) => onInputChange(e, 'endereco')} required />
-        </div>
-      </Dialog>
-      
       {/* Dialog para Deletar Cliente */}
       <Dialog visible={deleteClienteDialog} style={{ width: '450px' }} header="Confirmação" modal footer={deleteClienteDialogFooter} onHide={hideDeleteClienteDialog} closable={true} closeIcon="pi pi-times">
         <div className="confirmation-content">

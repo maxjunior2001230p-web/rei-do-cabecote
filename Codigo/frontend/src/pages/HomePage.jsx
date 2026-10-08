@@ -327,12 +327,12 @@ const HomePage = () => {
             },
             scales: {
                 y: {
-                    ticks: { color: '#ccc', stepSize: 1 },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                ticks: { color: '#68758a', stepSize: 1 },
+                grid: { color: 'rgba(23, 32, 51, 0.08)' }
                 },
                 x: {
                     ticks: { 
-                        color: '#ccc',
+                        color: '#68758a',
                         maxRotation: 45,
                         minRotation: 0,
                         autoSkip: false,
@@ -342,7 +342,7 @@ const HomePage = () => {
                             return label;
                         }
                     },
-                    grid: { display: false, color: 'rgba(255, 255, 255, 0.1)' }
+                    grid: { display: false, color: 'rgba(23, 32, 51, 0.08)' }
                 }
             }
         };
@@ -357,7 +357,7 @@ const HomePage = () => {
             plugins: {
                 legend: { 
                     position: 'top', 
-                    labels: { color: '#fff' } 
+                    labels: { color: '#52627a' }
                 },
                 title: { display: false },
             },
@@ -366,17 +366,17 @@ const HomePage = () => {
                     beginAtZero: true,
                     min: 0,
                     ticks: {
-                        color: '#ccc',
+                        color: '#68758a',
                         callback: function(value) {
                             return 'R$ ' + value.toLocaleString('pt-BR');
                         },
                         padding: 4
                     },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    grid: { color: 'rgba(23, 32, 51, 0.08)' }
                 },
                 x: {
-                    ticks: { color: '#ccc' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    ticks: { color: '#68758a' },
+                    grid: { color: 'rgba(23, 32, 51, 0.08)' }
                 }
             }
         };

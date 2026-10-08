@@ -42,6 +42,8 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route path="veiculos/novo" element={<ProtectedRoute><CrudVeiculo /></ProtectedRoute>} />
+                    <Route path="veiculos/editar/:id" element={<ProtectedRoute><CrudVeiculo /></ProtectedRoute>} />
                     <Route
                         path="pecas"
                         element={
@@ -50,6 +52,8 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route path="pecas/novo" element={<ProtectedRoute><CrudPecas /></ProtectedRoute>} />
+                    <Route path="pecas/editar/:id" element={<ProtectedRoute><CrudPecas /></ProtectedRoute>} />
                     <Route
                         path="usuarios"
                         element={
@@ -58,6 +62,8 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route path="usuarios/novo" element={<ProtectedRoute><CrudUsuario /></ProtectedRoute>} />
+                    <Route path="usuarios/editar/:id" element={<ProtectedRoute><CrudUsuario /></ProtectedRoute>} />
                     <Route
                         path="fornecedores"
                         element={
@@ -66,6 +72,8 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route path="fornecedores/novo" element={<ProtectedRoute><CrudFornecedor /></ProtectedRoute>} />
+                    <Route path="fornecedores/editar/:id" element={<ProtectedRoute><CrudFornecedor /></ProtectedRoute>} />
                     <Route
                         path="clientes"
                         element={
@@ -74,6 +82,8 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route path="clientes/novo" element={<ProtectedRoute><CrudCliente /></ProtectedRoute>} />
+                    <Route path="clientes/editar/:id" element={<ProtectedRoute><CrudCliente /></ProtectedRoute>} />
 
                     
                     <Route
@@ -84,6 +94,8 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route path="produtos-venda/novo" element={<ProtectedRoute><CrudProdutoVenda /></ProtectedRoute>} />
+                    <Route path="produtos-venda/editar/:id" element={<ProtectedRoute><CrudProdutoVenda /></ProtectedRoute>} />
                
                     <Route
                         path="servicos"

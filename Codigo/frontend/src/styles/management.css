@@ -647,107 +647,113 @@
   box-shadow: 0 0 0 3px rgba(8, 127, 130, 0.13);
 }
 
-.service-parts-panel .p-multiselect-header {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "check label close"
-    "filter filter filter";
-  align-items: center;
-  gap: 10px 12px;
-  padding: 12px;
-  border-bottom: 1px solid var(--management-line);
-  background: #f7fafb;
+.service-parts-panel {
+  width: min(560px, calc(100vw - 24px)) !important;
+  max-width: min(560px, calc(100vw - 24px)) !important;
+  min-width: 0 !important;
+  overflow: hidden;
+  border: 1px solid #dce4ef !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  box-shadow: 0 18px 40px rgba(20, 35, 58, 0.18) !important;
 }
 
-.service-parts-panel .p-multiselect-header .p-checkbox {
-  grid-area: check;
-  display: inline-flex;
+.service-parts-panel .p-multiselect-header {
+  display: flex !important;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--management-line);
+  background: #f8fafd;
+}
+
+.service-parts-panel .p-multiselect-filter-container {
+  position: relative;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.service-parts-panel .p-multiselect-select-all-label {
-  grid-area: label;
-  margin: 0;
-  color: #304657;
-  font-size: 0.82rem;
-  font-weight: 800;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
 .service-parts-panel .p-multiselect-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  grid-area: close;
-  width: 30px;
-  height: 30px;
-  border: 1px solid #cbd8df !important;
-  border-radius: 7px;
+  display: grid !important;
+  flex: 0 0 36px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 !important;
+  place-items: center;
+  border: 1px solid #d7e0eb !important;
+  border-radius: 8px;
   background: #ffffff !important;
-  color: #526779 !important;
+  color: #536985 !important;
 }
 
 .service-parts-panel .p-multiselect-close .p-icon,
 .service-parts-panel .p-multiselect-close .pi,
 .service-parts-panel .p-multiselect-close-icon {
-  width: 14px;
-  height: 14px;
-  color: #526779 !important;
-  font-size: 0.9rem;
+  display: block;
+  width: 13px;
+  height: 13px;
+  color: inherit !important;
+  font-size: 0.82rem;
 }
 
 .service-parts-panel .p-multiselect-close:hover {
-  border-color: #e58a24 !important;
-  background: #fff1df !important;
-  color: #9a4c00 !important;
-}
-
-.service-parts-panel .p-multiselect-filter-container {
-  grid-area: filter;
-  width: 100%;
+  border-color: #b9c8dc !important;
+  background: #edf3fb !important;
+  color: #173b72 !important;
 }
 
 .service-parts-panel .p-multiselect-filter {
   width: 100%;
-  min-height: 40px;
-  padding: 0 38px 0 12px;
-  border: 1px solid #cbd8df;
+  min-height: 42px;
+  padding: 0 38px 0 13px;
+  border: 1px solid #d5deea;
   border-radius: 8px;
-  color: var(--management-ink);
+  background: #fff;
+  color: #172033;
+  font-size: 0.84rem;
+}
+
+.service-parts-panel .p-multiselect-filter:enabled:focus {
+  border-color: #6f8fbd !important;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(39, 83, 145, 0.1) !important;
+}
+
+.service-parts-panel .p-multiselect-filter-icon {
+  right: 13px;
+  color: #748197;
 }
 
 .service-parts-panel .p-multiselect-filter:focus {
-  border-color: var(--management-teal);
-  box-shadow: 0 0 0 3px rgba(8, 127, 130, 0.12);
+  border-color: #6f8fbd;
+  box-shadow: 0 0 0 3px rgba(39, 83, 145, 0.1);
 }
 
 .service-parts-panel .p-multiselect-items-wrapper {
-  max-height: 260px;
+  max-height: min(320px, 45vh);
 }
 
 .service-parts-panel .p-multiselect-items {
-  padding: 6px;
+  padding: 7px;
 }
 
 .service-parts-panel .p-multiselect-item {
-  min-height: 42px;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: 7px;
-  color: #304657;
+  min-height: 44px;
+  gap: 11px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  color: #344258;
+  font-size: 0.84rem;
 }
 
 .service-parts-panel .p-multiselect-item:not(.p-highlight):hover {
-  background: #f1fbfa;
+  background: #f3f6fb;
 }
 
 .service-parts-panel .p-multiselect-item.p-highlight {
-  background: #fff8ed !important;
-  color: #9a4c00 !important;
+  background: #edf3fb !important;
+  color: #173b72 !important;
 }
 
 .service-parts-panel .p-checkbox {
@@ -757,14 +763,22 @@
 .service-parts-panel .p-checkbox .p-checkbox-box {
   width: 20px;
   height: 20px;
-  border: 2px solid #aebfc5;
-  border-radius: 5px;
+  border: 1px solid #b9c5d4;
+  border-radius: 6px;
 }
 
 .service-parts-panel .p-checkbox .p-checkbox-box.p-highlight {
-  border-color: #e58a24 !important;
-  background: #e58a24 !important;
+  border-color: #173b72 !important;
+  background: #173b72 !important;
   color: #ffffff;
+}
+
+.service-parts-panel .p-multiselect-empty-message {
+  padding: 18px 14px;
+  color: #748197;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
 /* PrimeReact renders these overlays outside .management-content. */

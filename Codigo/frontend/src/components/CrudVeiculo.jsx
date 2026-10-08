@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import './CrudUsuario.css';
 
@@ -12,10 +12,23 @@ import { Toolbar } from 'primereact/toolbar';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
 import ManagementFilters from './ManagementFilters';
+import AdminPageHeading from './AdminPageHeading';
+import AdminFormPanel, { AdminFormSection } from './AdminFormPanel';
+import AdminEntityPicker from './AdminEntityPicker';
+import useAdminFormRoute from '../hooks/useAdminFormRoute';
+import useManagementSort from '../hooks/useManagementSort';
+
+const vehicleSortOptions = [
+  { label: 'Placa', field: 'placa' },
+  { label: 'Modelo', field: 'modelo' },
+  { label: 'Montadora', field: 'montadora' },
+  { label: 'Ano modelo', field: 'ano_modelo' },
+  { label: 'Ano de fabricação', field: 'ano_fabricacao' },
+  { label: 'Cor', field: 'cor' },
+];
 
 const CrudVeiculo = () => {
   const [veiculos, setVeiculos] = useState([]);
-  const [veiculoDialog, setVeiculoDialog] = useState(false);
   const [deleteVeiculoDialog, setDeleteVeiculoDialog] = useState(false);
   const [veiculo, setVeiculo] = useState({
     id: null,
@@ -34,6 +47,23 @@ const CrudVeiculo = () => {
   const [selectedMontadora, setSelectedMontadora] = useState(null);
   const [clientes, setClientes] = useState([]);
   const [search, setSearch] = useState('');
+  const { sortField, sortOrder, setSortField, setSortOrder, sortOptions, sortItems } = useManagementSort('placa', vehicleSortOptions);
+  const loadVeiculo = useCallback(async (id) => {
+    const response = await api.get('/veiculos');
+    return response.data.find((item) => String(item.id) === id);
+  }, []);
+  const onFormLoadError = useCallback((error) => {
+    console.error('Erro ao carregar veículo:', error);
+    toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível carregar o veículo.', life: 3000 });
+  }, []);
+  const { isFormRoute, openNew: openNewRoute, openEdit, closeForm, finishSave } = useAdminFormRoute({
+    basePath: '/veiculos',
+    emptyValue: { id: null, placa: '', modelo: '', montadora: '', ano_modelo: '', ano_fabricacao: '', cor: '', cambio: null, cliente: null },
+    setValue: setVeiculo,
+    setIsEditing,
+    loadById: loadVeiculo,
+    onLoadError: onFormLoadError,
+  });
 
     useEffect(() => {
     api.get('/fipe/marcas')
@@ -47,7 +77,6 @@ const CrudVeiculo = () => {
   useEffect(() => {
     if (selectedMontadora) {
       setModelosOptions([]);
-      setVeiculo(prev => ({ ...prev, modelo: '' }));
 
       api.get(`/fipe/marcas/${selectedMontadora}/modelos`)
         .then(response => {
@@ -57,6 +86,12 @@ const CrudVeiculo = () => {
         .catch(error => console.error("Erro ao buscar modelos:", error));
     }
   }, [selectedMontadora]);
+
+  useEffect(() => {
+    if (!isFormRoute || !veiculo.montadora || montadorasOptions.length === 0) return;
+    const brand = montadorasOptions.find((item) => item.label === veiculo.montadora);
+    if (brand) setSelectedMontadora(brand.value);
+  }, [isFormRoute, montadorasOptions, veiculo.montadora]);
 
   useEffect(() => {
     api.get('/clientes')
@@ -88,34 +123,17 @@ const CrudVeiculo = () => {
     }
   };
 
-  const openNew = () => {
-    setVeiculo({
-      id: null,
-      placa: '',
-      modelo: '',
-      montadora: '',
-      ano_modelo: '',
-      ano_fabricacao: '',
-      cor: '',
-      cambio: null,
-      cliente: null,
-    });
-    setIsEditing(false);
-    setVeiculoDialog(true);
-  };
+  const openNew = openNewRoute;
 
-  const hideDialog = () => setVeiculoDialog(false);
+  const hideDialog = closeForm;
   const hideDeleteVeiculoDialog = () => setDeleteVeiculoDialog(false);
 
   const editVeiculo = (v) => {
-    let _veiculo = { ...v };
-    if (_veiculo.cliente && clientes.length > 0) {
-        _veiculo.cliente = clientes.find(c => c.id === _veiculo.cliente.id) || null;
-    }
-    
-    setVeiculo(_veiculo); 
-    setIsEditing(true);
-    setVeiculoDialog(true);
+    const selectedClient = v.cliente && clientes.length > 0
+      ? clientes.find((client) => client.id === v.cliente.id) || null
+      : v.cliente;
+    setSelectedMontadora(montadorasOptions.find((brand) => brand.label === v.montadora)?.value || null);
+    openEdit({ ...v, cliente: selectedClient });
   };
 
   const confirmDeleteVeiculo = (v) => {
@@ -164,7 +182,7 @@ const CrudVeiculo = () => {
         await api.post('/veiculos', veiculoDto);
         toast.current.show({ severity: 'success', summary: 'Sucesso', detail: 'Veículo Criado', life: 3000 });
       }
-      setVeiculoDialog(false);
+      finishSave();
       buscarVeiculos();
     } catch (error) {
       const errorMsg = error?.response?.data?.message || 'Não foi possível salvar o veículo.';
@@ -183,131 +201,102 @@ const CrudVeiculo = () => {
     }
   };
 
-  const veiculoDialogFooter = (
-    <React.Fragment>
-      <Button style={{ backgroundColor: '#000000ff', color: 'white' }} label="Cancelar" icon="pi pi-times" outlined onClick={hideDialog} />
-      <Button style={{ backgroundColor: '#000000ff', color: 'white' }} label="Salvar" icon="pi pi-check" onClick={saveVeiculo} />
-    </React.Fragment>
-  );
-
   const deleteVeiculoDialogFooter = (
     <React.Fragment>
-      <Button style={{ backgroundColor: '#000000ff', color: 'white' }} label="Não" icon="pi pi-times" outlined onClick={hideDeleteVeiculoDialog} />
-      <Button style={{ backgroundColor: '#000000ff', color: 'white' }} label="Sim" icon="pi pi-check" severity="danger" onClick={deleteVeiculo} />
+      <Button label="Não" icon="pi pi-times" outlined onClick={hideDeleteVeiculoDialog} />
+      <Button label="Sim" icon="pi pi-check" severity="danger" onClick={deleteVeiculo} />
     </React.Fragment>
   );
 
   const actionBodyTemplate = (rowData) => {
     return (
       <React.Fragment>
-        <Button style={{ backgroundColor: '#000000ff', color: 'white' }} icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editVeiculo(rowData)} />
-        <Button style={{ backgroundColor: '#000000ff', color: 'red' }} icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteVeiculo(rowData)} />
+        <Button icon="pi pi-pencil" rounded outlined className="p-mr-2" onClick={() => editVeiculo(rowData)} />
+        <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteVeiculo(rowData)} />
       </React.Fragment>
     );
   };
 
-  const veiculosFiltrados = veiculos.filter((item) => `${item.placa} ${item.modelo} ${item.montadora} ${item.cor} ${item.cambio}`.toLowerCase().includes(search.toLowerCase()));
+  const veiculosFiltrados = sortItems(veiculos.filter((item) => `${item.placa} ${item.modelo} ${item.montadora} ${item.cor} ${item.cambio}`.toLowerCase().includes(search.toLowerCase())));
 
   return (
     <div className="card">
       <Toast ref={toast} />
-      <Toolbar className="p-mb-4" start={<div className="my-2"><h2 className="titulo">Gerenciamento de Veículos</h2></div>} end={<Button style={{ backgroundColor: '#000000ff', color: 'white' }} label="Adicionar Novo Veículo" icon="pi pi-plus" severity="success" onClick={openNew} />} />
-      <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por placa, modelo, montadora ou cor" />
-
-      <DataTable value={veiculosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum veículo encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
-        <Column field="placa" header="Placa" sortable></Column>
-        <Column field="modelo" header="Modelo" sortable></Column>
-        <Column field="montadora" header="Montadora" sortable></Column>
-        <Column field="ano_modelo" header="Ano Modelo" sortable></Column>
-        <Column field="ano_fabricacao" header="Ano Fabricação" sortable></Column>
-        <Column field="cor" header="Cor" sortable></Column>
-        <Column field="cambio" header="Câmbio" sortable></Column>
-        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
-      </DataTable>
-
-      <Dialog
-        visible={veiculoDialog}
-        style={{ width: '520px' }}
-        header={isEditing ? 'Editar Veículo' : 'Adicionar Veículo'}
-        modal
-        className="p-fluid form-dialog vehicle-dialog"
-        footer={veiculoDialogFooter}
-        onHide={hideDialog}
-        closable
-        closeIcon="pi pi-times"
-      >
-        <div className="vehicle-form-grid">
-        <div className="p-field vehicle-form-wide">
-          <label htmlFor="cliente">Cliente *</label>
-          <Dropdown 
-            id="cliente" 
-            value={veiculo.cliente}
-            options={clientes}
-            optionLabel="nome" 
-            onChange={(e) => onDropdownChange(e, 'cliente')} 
-            placeholder="Selecione o Cliente" 
-            filter
-            filterBy="nome"
-            showClear
-            required
-          />
-        </div>
-        
-        <div className="p-field">
-          <label htmlFor="placa">Placa</label>
-          <InputText style={{ padding: '8px' }} id="placa" value={veiculo.placa} onChange={(e) => onInputChange(e, 'placa')} required />
-        </div>
-
-        <div className="p-field">
-          <label htmlFor="montadora">Montadora</label>
-          <Dropdown 
-            id="montadora" 
-            value={selectedMontadora}
-            options={montadorasOptions} 
-            onChange={onMontadoraChange} 
-            placeholder="Selecione a Montadora" 
-            filter
-            filterBy="label"
-            showClear
-          />
-        </div>
-
-        <div className="p-field">
-          <label htmlFor="modelo">Modelo</label>
-          <Dropdown 
-            id="modelo" 
-            value={veiculo.modelo} 
-            options={modelosOptions} 
-            onChange={(e) => onInputChange(e, 'modelo')}
-            placeholder="Selecione o Modelo" 
-            disabled={!selectedMontadora} 
-            filter 
-            filterBy="label"
-            showClear
-          />
-        </div>
-
-        <div className="p-field">
-          <label htmlFor="ano_modelo">Ano Modelo</label>
-          <InputMask style={{ padding: '8px' }} id="ano_modelo" mask="9999" value={veiculo.ano_modelo} onChange={(e) => onInputChange(e, 'ano_modelo')} placeholder="2024" required />
-        </div>
-
-        <div className="p-field">
-          <label htmlFor="ano_fabricacao">Ano de Fabricação</label>
-          <InputMask style={{ padding: '8px' }} id="ano_fabricacao" mask="9999" value={veiculo.ano_fabricacao} onChange={(e) => onInputChange(e, 'ano_fabricacao')} placeholder="2024" required />
-        </div>
-
-        <div className="p-field">
-          <label htmlFor="cor">Cor</label>
-          <InputText style={{ padding: '8px' }} id="cor" value={veiculo.cor} onChange={(e) => onInputChange(e, 'cor')} />
-        </div>
-
-        <div className="p-field">
-          <label htmlFor="cambio">Câmbio</label>
-          <Dropdown id="cambio" value={veiculo.cambio} options={cambios} onChange={(e) => onDropdownChange(e, 'cambio')} placeholder="Selecione o câmbio" required />
-        </div>
-        </div>
-      </Dialog>
+      {!isFormRoute ? (
+        <>
+          <Toolbar className="p-mb-4" start={<AdminPageHeading eyebrow="Relacionamento" title="Veículos" description="Acompanhe os veículos vinculados aos clientes." />} end={<Button label="Adicionar veículo" icon="pi pi-plus" onClick={openNew} />} />
+          <ManagementFilters search={search} onSearch={setSearch} placeholder="Buscar por placa, modelo, montadora ou cor" sortField={sortField} sortOrder={sortOrder} onSortFieldChange={setSortField} onSortOrderChange={setSortOrder} sortOptions={sortOptions} />
+          <DataTable value={veiculosFiltrados} responsiveLayout="scroll" emptyMessage="Nenhum veículo encontrado." tableStyle={{ minWidth: '42rem' }} paginator rows={10}>
+            <Column field="placa" header="Placa" sortable></Column>
+            <Column field="modelo" header="Modelo" sortable></Column>
+            <Column field="montadora" header="Montadora" sortable></Column>
+            <Column field="ano_modelo" header="Ano Modelo" sortable></Column>
+            <Column field="ano_fabricacao" header="Ano Fabricação" sortable></Column>
+            <Column field="cor" header="Cor" sortable></Column>
+            <Column field="cambio" header="Câmbio" sortable></Column>
+            <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '8rem' }}></Column>
+          </DataTable>
+        </>
+      ) : (
+        <AdminFormPanel
+          title={isEditing ? 'Editar veículo' : 'Novo veículo'}
+          description="Vincule o veículo ao cliente e registre suas principais características."
+          submitLabel={isEditing ? 'Salvar alterações' : 'Cadastrar veículo'}
+          onCancel={hideDialog}
+          onSubmit={saveVeiculo}
+        >
+          <AdminFormSection title="Proprietário" description="Selecione o cliente responsável por este veículo.">
+            <div className="admin-form-grid">
+              <div className="admin-form-wide">
+                <AdminEntityPicker
+                  label="Cliente *"
+                  title="Selecionar cliente"
+                  placeholder="Buscar e selecionar cliente"
+                  emptyMessage="Nenhum cliente corresponde à busca."
+                  options={clientes}
+                  value={veiculo.cliente}
+                  onChange={(value) => onDropdownChange({ value }, 'cliente')}
+                  getLabel={(item) => item.nome}
+                  getSearchText={(item) => `${item.nome} ${item.cpf || ''} ${item.telefone || ''} ${item.endereco || ''}`}
+                  getDetails={(item) => [item.cpf && `CPF ${item.cpf}`, item.telefone, item.endereco].filter(Boolean).join(' · ')}
+                />
+              </div>
+            </div>
+          </AdminFormSection>
+          <AdminFormSection title="Identificação do veículo" description="Informe placa, marca, modelo e dados de fabricação.">
+            <div className="admin-form-grid">
+              <div className="p-field">
+                <label htmlFor="placa">Placa *</label>
+                <InputText id="placa" value={veiculo.placa} onChange={(e) => onInputChange(e, 'placa')} required placeholder="ABC1D23" />
+              </div>
+              <div className="p-field">
+                <label htmlFor="montadora">Montadora *</label>
+                <Dropdown id="montadora" value={selectedMontadora} options={montadorasOptions} onChange={onMontadoraChange} placeholder="Selecione a montadora" filter filterBy="label" showClear />
+              </div>
+              <div className="p-field">
+                <label htmlFor="modelo">Modelo *</label>
+                <Dropdown id="modelo" value={veiculo.modelo} options={modelosOptions} onChange={(e) => onInputChange(e, 'modelo')} placeholder="Selecione o modelo" disabled={!selectedMontadora} filter filterBy="label" showClear />
+              </div>
+              <div className="p-field">
+                <label htmlFor="cambio">Câmbio *</label>
+                <Dropdown id="cambio" value={veiculo.cambio} options={cambios} onChange={(e) => onDropdownChange(e, 'cambio')} placeholder="Selecione o câmbio" required />
+              </div>
+              <div className="p-field">
+                <label htmlFor="ano_modelo">Ano modelo *</label>
+                <InputMask id="ano_modelo" mask="9999" value={veiculo.ano_modelo} onChange={(e) => onInputChange(e, 'ano_modelo')} placeholder="2024" required />
+              </div>
+              <div className="p-field">
+                <label htmlFor="ano_fabricacao">Ano de fabricação *</label>
+                <InputMask id="ano_fabricacao" mask="9999" value={veiculo.ano_fabricacao} onChange={(e) => onInputChange(e, 'ano_fabricacao')} placeholder="2024" required />
+              </div>
+              <div className="p-field">
+                <label htmlFor="cor">Cor</label>
+                <InputText id="cor" value={veiculo.cor} onChange={(e) => onInputChange(e, 'cor')} placeholder="Ex.: Prata" />
+              </div>
+            </div>
+          </AdminFormSection>
+        </AdminFormPanel>
+      )}
 
       <Dialog
         visible={deleteVeiculoDialog}
