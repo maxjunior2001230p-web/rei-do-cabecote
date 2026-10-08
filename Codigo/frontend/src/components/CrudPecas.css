@@ -73,6 +73,107 @@
   text-align: center;
 }
 
+.admin-main .parts-management-card .management-filters {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(0, 2fr);
+  align-items: end;
+  gap: 18px;
+  padding: 20px 28px;
+  background: linear-gradient(180deg, #fffaf2 0%, #fff 100%);
+}
+
+.admin-main .parts-management-card .management-search {
+  width: 100%;
+  min-height: 46px;
+  border-color: #e5d9c6;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(23, 26, 34, 0.035);
+}
+
+.admin-main .parts-management-card .management-search:focus-within {
+  border-color: #ff9800;
+  box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.14);
+}
+
+.admin-main .parts-management-card .management-filter-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.38fr);
+  align-items: end;
+  gap: 20px;
+}
+
+.admin-main .parts-management-card .management-filter-options {
+  min-width: 0;
+}
+
+.admin-main .parts-management-card .management-filter-selects {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 8px;
+}
+
+.admin-main .parts-management-card .management-filter-selects > .p-dropdown {
+  min-width: 0;
+  min-height: 42px;
+  border-color: #e5d9c6;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.admin-main .parts-management-card .management-sort-controls {
+  min-width: 0;
+  padding-left: 20px;
+  border-left-color: #eadfce;
+}
+
+.admin-main .parts-management-card .management-sort-fields select {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  border-color: #e5d9c6;
+  border-radius: 9px;
+}
+
+.admin-main .parts-management-card .parts-clear-filters {
+  min-height: 42px;
+  flex: 0 0 auto;
+  border-color: #e5d9c6 !important;
+  border-radius: 9px;
+  background: #fff !important;
+  color: #72502b !important;
+}
+
+.admin-main .parts-management-card .parts-clear-filters:not(:disabled):hover {
+  border-color: #e8b96d !important;
+  background: #fff7e8 !important;
+  color: #8a4b00 !important;
+}
+
+.admin-main .parts-management-card .parts-filter-summary {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 28px;
+  color: #68758a;
+  font-size: 0.78rem;
+}
+
+.admin-main .parts-management-card .parts-filter-summary span:first-child {
+  color: #343943;
+  font-weight: 750;
+}
+
+.admin-main .parts-management-card .parts-filter-summary span:last-child:not(:first-child) {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #fff1df;
+  color: #925000;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
 @media (max-width: 600px) {
   .parts-management-card .parts-form-grid {
     grid-template-columns: 1fr;
@@ -81,5 +182,58 @@
   .parts-management-card .parts-form-grid .p-field:first-child,
   .parts-management-card .parts-form-grid .p-field:nth-child(2) {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 1400px) {
+  .admin-main .parts-management-card .management-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-main .parts-management-card .management-search {
+    width: 100%;
+  }
+
+  .admin-main .parts-management-card .management-filter-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-main .parts-management-card .management-filter-options {
+    width: 100%;
+  }
+
+  .admin-main .parts-management-card .management-sort-controls {
+    width: 100%;
+    padding: 12px 0 0;
+    border-top: 1px solid #eadfce;
+    border-left: 0;
+  }
+
+  .admin-main .parts-management-card .management-filter-selects > .p-dropdown {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-main .parts-management-card .management-filters {
+    padding: 16px;
+  }
+
+  .admin-main .parts-management-card .management-filter-selects {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-main .parts-management-card .management-filter-selects > .p-dropdown,
+  .admin-main .parts-management-card .parts-clear-filters {
+    width: 100%;
+  }
+
+  .admin-main .parts-management-card .management-sort-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-main .parts-management-card .parts-filter-summary {
+    padding: 0 16px;
   }
 }
